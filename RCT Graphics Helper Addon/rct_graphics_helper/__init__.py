@@ -15,7 +15,7 @@ bl_info = {
     "blender": (2, 79, 0),
     "location": "Render",
     "support": "COMMUNITY",
-    "category": "Render" }
+    "category": "Render"}
 
 
 import bpy
@@ -30,7 +30,6 @@ importlib.reload(developer_utils)
 modules = developer_utils.setup_addon_modules(__path__, __name__, "bpy" in locals())
 
 
-
 # register
 ##################################
 
@@ -40,9 +39,12 @@ from . vehicles_panel import register_vehicles_panel, unregister_vehicles_panel
 
 import traceback
 
+
 def register():
-    try: bpy.utils.register_module(__name__)
-    except: traceback.print_exc()
+    try:
+        bpy.utils.register_module(__name__)
+    except:
+        traceback.print_exc()
 
     register_general_panel()
     register_static_panel()
@@ -50,9 +52,12 @@ def register():
 
     print("Registered {} with {} modules".format(bl_info["name"], len(modules)))
 
+
 def unregister():
-    try: bpy.utils.unregister_module(__name__)
-    except: traceback.print_exc()
+    try:
+        bpy.utils.unregister_module(__name__)
+    except:
+        traceback.print_exc()
 
     unregister_general_panel()
     unregister_static_panel()

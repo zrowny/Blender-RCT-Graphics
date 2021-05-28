@@ -14,7 +14,7 @@ import os
 from . render_operator import RCTRender
 from . angle_sections.track import track_angle_sections, track_angle_sections_names
 from . render_task import *
-    
+
 
 class RenderVehicle(RCTRender, bpy.types.Operator):
     bl_idname = "render.rct_vehicle"
@@ -45,30 +45,37 @@ class RenderVehicle(RCTRender, bpy.types.Operator):
             track_section = track_angle_sections[key]
             if self.key_is_property(key):
                 if self.property_value(key):
-                    self.renderTask.add(track_section, render_layer, inverted, start_anim, anim_count)
-            elif key == "VEHICLE_SPRITE_FLAG_GENTLE_SLOPE_BANKED_TURNS" or key == "VEHICLE_SPRITE_FLAG_GENTLE_SLOPE_BANKED_TRANSITIONS":
+                    self.renderTask.add(
+                        track_section, render_layer, inverted, start_anim, anim_count)
+            elif (key == "VEHICLE_SPRITE_FLAG_GENTLE_SLOPE_BANKED_TURNS"
+                    or key == "VEHICLE_SPRITE_FLAG_GENTLE_SLOPE_BANKED_TRANSITIONS"):
                 if self.property_value("SLOPED_TURNS"):
-                    self.renderTask.add(track_section, render_layer, inverted, start_anim, anim_count)
+                    self.renderTask.add(
+                        track_section, render_layer, inverted, start_anim, anim_count)
             elif key == "VEHICLE_SPRITE_FLAG_FLAT_TO_GENTLE_SLOPE_WHILE_BANKED_TRANSITIONS":
                 if self.property_value("SLOPED_TURNS") and self.property_value("VEHICLE_SPRITE_FLAG_FLAT_BANKED"):
-                    self.renderTask.add(track_section, render_layer, inverted, start_anim,anim_count)
+                    self.renderTask.add(
+                        track_section, render_layer, inverted, start_anim, anim_count)
             elif key == "VEHICLE_SPRITE_FLAG_DIAGONAL_GENTLE_SLOPE_BANKED_TRANSITIONS":
                 if self.property_value("SLOPED_TURNS") and self.property_value("VEHICLE_SPRITE_FLAG_DIAGONAL_SLOPES"):
-                    self.renderTask.add(track_section, render_layer, inverted, start_anim, anim_count)
+                    self.renderTask.add(
+                        track_section, render_layer, inverted, start_anim, anim_count)
             elif key == "VEHICLE_SPRITE_FLAG_FLAT_TO_GENTLE_SLOPE_BANKED_TRANSITIONS":
-                if self.property_value("VEHICLE_SPRITE_FLAG_FLAT_BANKED") and self.property_value("VEHICLE_SPRITE_FLAG_GENTLE_SLOPES"):
-                    self.renderTask.add(track_section, render_layer, inverted, start_anim, anim_count)
-            elif key == "VEHICLE_SPRITE_FLAG_RESTRAINT_ANIMATION" and inverted == False:
+                if (self.property_value("VEHICLE_SPRITE_FLAG_FLAT_BANKED")
+                        and self.property_value("VEHICLE_SPRITE_FLAG_GENTLE_SLOPES")):
+                    self.renderTask.add(
+                        track_section, render_layer, inverted, start_anim, anim_count)
+            elif key == "VEHICLE_SPRITE_FLAG_RESTRAINT_ANIMATION" and inverted is False:
                 if self.props.restraint_animation:
-                    self.renderTask.add(track_section, render_layer, inverted, 1, 3)
-                    
+                    self.renderTask.add(
+                        track_section, render_layer, inverted, 1, 3)
 
     def execute(self, context):
         self.scene = context.scene
         self.props = self.scene.rct_graphics_helper_vehicle_properties
 
-        self.renderTask = RenderTask(context.scene.rct_graphics_helper_general_properties.out_start_index, context)
-
+        self.renderTask = RenderTask(
+            context.scene.rct_graphics_helper_general_properties.out_start_index, context)
 
         for i in range(context.scene.rct_graphics_helper_general_properties.number_of_rider_sets + 1):
             self.append_angles_to_rendertask(i, False)
@@ -77,10 +84,11 @@ class RenderVehicle(RCTRender, bpy.types.Operator):
                 self.append_angles_to_rendertask(i, True)
 
         return super(RenderVehicle, self).execute(context)
-        
+
     def finished(self, context):
         super(RenderVehicle, self).finished(context)
         self.report({'INFO'}, 'RCT Vehicle render finished.')
+
 
 class SpriteTrackFlag(object):
     name = ""
@@ -94,13 +102,14 @@ class SpriteTrackFlag(object):
         self.description = description
         self.default_value = default_value
 
+
 class VehicleProperties(bpy.types.PropertyGroup):
     sprite_track_flags_list = []
 
     sprite_track_flags_list.append(SpriteTrackFlag(
         "VEHICLE_SPRITE_FLAG_FLAT",
-        "Flat", 
-        "Render sprites for flat track", 
+        "Flat",
+        "Render sprites for flat track",
         True))
     sprite_track_flags_list.append(SpriteTrackFlag(
         "VEHICLE_SPRITE_FLAG_GENTLE_SLOPES",
@@ -153,20 +162,22 @@ class VehicleProperties(bpy.types.PropertyGroup):
         defaults.append(sprite_track_flag.default_value)
 
     sprite_track_flags = bpy.props.BoolVectorProperty(
-        name = "Track Pieces",
-        default = defaults,
-        description = "Which track pieces to render sprites for",
-        size = len(sprite_track_flags_list))
+        name="Track Pieces",
+        default=defaults,
+        description="Which track pieces to render sprites for",
+        size=len(sprite_track_flags_list))
 
     restraint_animation = bpy.props.BoolProperty(
-        name = "Restraint Animation",
-        description = "Render with restraint animation. The restrain animation is 3 frames long and starts at frame 1",
-        default = False)
-        
+        name="Restraint Animation",
+        description="Render with restraint animation. The restrain animation is 3 frames long and starts at frame 1",
+        default=False)
+
     inverted_set = bpy.props.BoolProperty(
-        name = "Inverted Set",
-        description = "Used for rides which can invert for an extended amount of time like the flying and lay-down rollercoasters",
-        default = False)
+        name="Inverted Set",
+        description=("Used for rides which can invert for an extended amount of time like the flying and"
+                     "lay-down rollercoasters"),
+        default=False)
+
 
 class VehiclesPanel(bpy.types.Panel):
     bl_label = "RCT Vehicles"
@@ -179,7 +190,7 @@ class VehiclesPanel(bpy.types.Panel):
         layout = self.layout
         scene = context.scene
         properties = scene.rct_graphics_helper_vehicle_properties
-        
+
         box = layout.box()
 
         row = box.row()
@@ -189,22 +200,24 @@ class VehiclesPanel(bpy.types.Panel):
         columns = [split.column(), split.column()]
         i = 0
         for sprite_track_flagset in properties.sprite_track_flags_list:
-            columns[i % 2].row().prop(properties, "sprite_track_flags", index = i, text = sprite_track_flagset.name)
+            columns[i % 2].row().prop(properties, "sprite_track_flags",
+                                      index=i, text=sprite_track_flagset.name)
             i += 1
 
         row = layout.row()
         row.prop(properties, "restraint_animation")
-        
+
         row = layout.row()
         row.prop(properties, "inverted_set")
 
         row = layout.row()
-        row.operator("render.rct_vehicle", text = "Render Vehicle")
-        
+        row.operator("render.rct_vehicle", text="Render Vehicle")
 
-      
+
 def register_vehicles_panel():
-    bpy.types.Scene.rct_graphics_helper_vehicle_properties = bpy.props.PointerProperty(type=VehicleProperties)
-    
+    bpy.types.Scene.rct_graphics_helper_vehicle_properties = bpy.props.PointerProperty(
+        type=VehicleProperties)
+
+
 def unregister_vehicles_panel():
     del bpy.types.Scene.rct_graphics_helper_vehicle_properties
