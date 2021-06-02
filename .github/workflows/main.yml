@@ -25,19 +25,19 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      # Zip up the addon
-      - name: Easy Zip Files
-        # You may pin to the exact commit or the version.
-        # uses: vimtor/action-zip@5f1c4aa587ea41db1110df6a99981dbe19cee310
-        uses: vimtor/action-zip@v1
-        with:
-          files: '"RCT Graphics Helper Addon/rct_graphics_helper"'
-          dest: 'rct-graphics-helper.zip'
-#       - name: Zip Release
-#         uses: TheDoctor0/zip-release@0.4.2
+#       # Zip up the addon
+#       - name: Easy Zip Files
+#         # You may pin to the exact commit or the version.
+#         # uses: vimtor/action-zip@5f1c4aa587ea41db1110df6a99981dbe19cee310
+#         uses: vimtor/action-zip@v1
 #         with:
-#           filename: 'rct-graphics-helper.zip'
-#           path: '"\"RCT Graphics Helper Addon/rct_graphics_helper\""'
+#           files: '"RCT Graphics Helper Addon/rct_graphics_helper"'
+#           dest: 'rct-graphics-helper.zip'
+      - name: Zip Release
+        uses: TheDoctor0/zip-release@0.4.2
+        with:
+          filename: 'rct-graphics-helper.zip'
+          path: "RCT Graphics Helper Addon/rct_graphics_helper/"
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2.2.3
