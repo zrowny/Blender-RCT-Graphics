@@ -25,11 +25,8 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      - name: Zip Release
-        run: zip -r rct-graphics-helper.zip "RCT Graphics Helper Addon/rct_graphics_helper/"
-
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2.2.3
         with:
           name: 'rct-graphics-helper'
-          path: 'rct-graphics-helper.zip'
+          path: 'RCT Graphics Helper Addon/rct_graphics_helper/'
