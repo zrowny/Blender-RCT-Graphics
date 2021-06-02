@@ -26,10 +26,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Zip Release
-        uses: TheDoctor0/zip-release@0.4.2
-        with:
-          filename: 'rct-graphics-helper.zip'
-          path: "\"RCT\\ Graphics\\ Helper\\ Addon/rct_graphics_helper/\""
+        run: zip -r rct-graphics-helper.zip . -i "RCT Graphics Helper Addon/rct_graphics_helper/"
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2.2.3
