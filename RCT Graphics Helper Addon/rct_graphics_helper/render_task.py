@@ -1,5 +1,5 @@
 '''
-Copyright (c) 2018 RCT Graphics Helper developers
+Copyright (c) 2021 RCT Graphics Helper developers
 
 For a complete list of all authors, please refer to the addon's meta info.
 Interested in contributing? Visit https://github.com/oli414/Blender-RCT-Graphics
@@ -7,42 +7,188 @@ Interested in contributing? Visit https://github.com/oli414/Blender-RCT-Graphics
 RCT Graphics Helper is licensed under the GNU General Public License version 3.
 '''
 
+from collections import namedtuple
+from enum import Enum
 import bpy
 import math
 import os
 import subprocess
+import shutil
+
+from bpy.types import PARTICLE_PT_velocity
+from . json_functions import JsonImage
+from . import json_functions
 
 
-def get_output_path(context, index):
-    return bpy.path.abspath(context.scene.rct_graphics_helper_general_properties.output_directory+str(index)+".png")
+def get_res_path(path):
+    script_file = os.path.realpath(__file__)
+    directory = os.path.dirname(script_file) + "/res/"
+    return directory + path
 
 
-def get_offset_output_path(context, index):
-    return bpy.path.abspath(context.scene.rct_graphics_helper_general_properties.output_directory+str(index)+".txt")
+def get_output_path(filename):
+    """Returns the absolute path, given the filename of something in the `output` folder
+
+    Args:
+        filename (str):
+
+    Returns:
+        str:
+    """
+    rawpath = bpy.path.abspath("//output/" + filename)  # type: str
+    return rawpath
 
 
-def mask_layer(layer_index, context):
-    for render_layer in context.scene.render.layers:
-        if render_layer.use:
-            for i in range(9):  # Maximum of 8 rider pairs, 1 for the vehicle itself
-                render_layer.layers[i] = i == layer_index
-                render_layer.layers_zmask[i] = i <= layer_index
-            render_layer.use_zmask = True
-            break
+def rename(filename, new_filename):
+    filename = os.path.normpath(filename)
+    new_filename = os.path.normpath(new_filename)
+    # try:
+    #     if os.path.exists(new_filename):
+    #         os.remove(new_filename)
+    # except:
+    #     print("Cannot rename %s, perhaps %s is in use? Continuing with old image" % (
+    #         bpy.path.relpath(filename), bpy.path.relpath(new_filename)))
+    #     return
+    os.rename(filename, new_filename)
 
 
-def render(context, index):
-    bpy.data.scenes['Scene'].render.filepath = get_output_path(context, index)
+def config_compositor_nodes(render_layer="Normal"):
+    """Configures the compositing nodes for separating saving remappable layers
+
+    Args:
+        render_layer (str, optional): The name of the Render Layer to use for compositing.
+        Defaults to "Normal".
+    """
+    scene = bpy.context.scene
+    scene.use_nodes = True
+    tree = scene.node_tree
+    groups = bpy.data.node_groups
+    links = tree.links
+
+    rct_remap_out = groups.get("RCT_RemapOutput")
+    if rct_remap_out is None:
+        rct_remap_out = groups.new("RCT_RemapOutput", 'CompositorNodeTree')
+        group_links = rct_remap_out.links
+        inputs_node = rct_remap_out.nodes.new('NodeGroupInput')
+        inputs_node.location = (0, -400)
+        rct_remap_out.inputs.new('NodeSocketColor', "Image")
+        rct_remap_out.inputs.new('NodeSocketInt', "ID Value")
+        rct_remap_out.inputs[0].default_value = [0.0, 0.0, 0.0, 0.0]
+        rct_remap_out.inputs[1].default_value = -1
+        file_out_node = rct_remap_out.nodes.new(
+            'CompositorNodeOutputFile')  # type: bpy.types.CompositorNodeOutputFile
+        file_out_node.location = (800, -250)
+        file_out_node.base_path = "//output/TMP/"
+        file_out_node.file_slots[0].path = "noremap/"
+        for i in range(1, 4):
+            file_out_node.file_slots.new("remap%s/" % i)
+        
+        id_node = rct_remap_out.nodes.new('CompositorNodeIDMask')  # type: bpy.types.CompositorNodeIDMask
+        id_node.index = 0
+        id_node.location = (175, 50)
+        alpha_node = rct_remap_out.nodes.new('CompositorNodeSetAlpha')  # type: bpy.types.CompositorNodeSetAlpha
+        alpha_node.location = (500, 0)
+        separate_node = rct_remap_out.nodes.new('CompositorNodeSepRGBA')  # type: bpy.types.CompositorNodeSepRGBA
+        separate_node.location = (175, -100)
+        math_node = rct_remap_out.nodes.new('CompositorNodeMath')  # type: bpy.types.CompositorNodeMath
+        math_node.location = (400, 0)
+        math_node.operation = 'MINIMUM'
+        
+        group_links.new(input=inputs_node.outputs[0], output=alpha_node.inputs[0])
+        group_links.new(input=inputs_node.outputs[0], output=separate_node.inputs[0])
+        group_links.new(input=inputs_node.outputs[1], output=id_node.inputs[0])
+        group_links.new(input=id_node.outputs[0], output=math_node.inputs[0])
+        group_links.new(input=separate_node.outputs['A'], output=math_node.inputs[1])
+        group_links.new(input=math_node.outputs[0], output=alpha_node.inputs[1])
+        group_links.new(input=alpha_node.outputs[0], output=file_out_node.inputs[0])
+        for i in range(1, 4):
+            id_node = rct_remap_out.nodes.new('CompositorNodeIDMask')  # type: bpy.types.CompositorNodeIDMask
+            id_node.index = i
+            id_node.location = (300, i * -250)
+            alpha_node = rct_remap_out.nodes.new('CompositorNodeSetAlpha')  # type: bpy.types.CompositorNodeSetAlpha
+            alpha_node.location = (500, i * -250)
+            group_links.new(input=inputs_node.outputs[0], output=alpha_node.inputs[0])
+            group_links.new(input=inputs_node.outputs[1], output=id_node.inputs[0])
+            group_links.new(input=id_node.outputs[0], output=alpha_node.inputs[1])
+            group_links.new(input=alpha_node.outputs[0], output=file_out_node.inputs[i])
+            
+    for node in tree.nodes:
+        tree.nodes.remove(node)
+    
+    render_layers = tree.nodes.new('CompositorNodeRLayers')  # type: bpy.types.CompositorNodeRLayers
+    rct_remap_out_node = tree.nodes.new('CompositorNodeGroup')  # type: bpy.types.CompositorNodeGroup
+    rct_remap_out_node.node_tree = rct_remap_out
+    rct_remap_out_node.location = (250, 0)
+    links.new(render_layers.outputs[0], rct_remap_out_node.inputs[0])
+    links.new(render_layers.outputs.get("IndexMA"), rct_remap_out_node.inputs[1])
+    render_layers.layer = render_layer
+
+
+class Angle(namedtuple("Angle", ["rot", "x", "y", "z"])):
+    """Describes a tuple of angles. All angles are in degrees
+
+    Args:
+        rot (float): Vertical rotation around the object. Defaults to 0.
+        x (float): Rotation around x-axis (pitch). Defaults to 0.
+        y (float): Rotation around y-axis (roll). Defaults to 0.
+        z (float): Rotation around z-axis (yaw). Defaults to 0.
+    """
+    __slots__ = ()
+
+
+class AngleSection(namedtuple("AngleSection", ["is_diagonal", "num_angles", "x", "y", "z"])):
+    """Describes a section of angles. All angles are in degrees
+
+    Args:
+        is_diagonal (boolean): Vertical rotation around the object. Defaults to 0.
+        num_angles (int): Vertical rotation around the object. Defaults to 0.
+        x (float): Rotation around x-axis (pitch). Defaults to 0.
+        y (float): Rotation around y-axis (roll). Defaults to 0.
+        z (float): Rotation around z-axis (yaw). Defaults to 0.
+    """
+    __slots__ = ()
+
+    @property
+    def angles(self):
+        angles = []
+        rot = 0
+        if self.is_diagonal:
+            rot = 45
+        rot_step = 0
+        if self.num_angles == 2:
+            rot_step = 90
+        else:
+            rot_step = 360 / self.num_angles
+        for i in range(self.num_angles):
+            angles.append(Angle(rot, self.x, self.y, self.z))
+            rot += rot_step
+        return angles
+
+
+def render(context, filename):
+    bpy.data.scenes['Scene'].render.filepath = "//output/TMP/" + filename
     bpy.ops.render.render(write_still=True)
     return
 
 
 def rotate_for_vertical_joint(x, y, modifier=1):
-    vertical_joint = bpy.data.objects['VerticalJoint']
+    '''Returns a list of x and y
+
+    :param x: X offset
+    :type x: float
+    :param y: Y offset
+    :type y: float
+    :param modifier: Scales
+    :type modifier: float
+
+    '''
+
+    vertical_joint = bpy.data.objects['RCT_VerticalJoint']
     if vertical_joint is None:
         return False
     angle = -vertical_joint.rotation_euler[2] * modifier
-    return [round(x * math.cos(angle) - y * math.sin(angle)), round(x * math.sin(angle) + y * math.cos(angle))]
+    return [round(x * math.cos(angle) - y * math.sin(angle)),
+            round(x * math.sin(angle) + y * math.cos(angle))]
 
 
 def position_cookie_cutter(context, x, y, left, right, enable):
@@ -74,230 +220,270 @@ def position_cookie_cutter(context, x, y, left, right, enable):
     return True
 
 
-def rotate_rig(context, angle, verAngle=0, bankedAngle=0, midAngle=0):
-    object = bpy.data.objects['Rig']
+def rotate_rig(angle: Angle):
+    """Rotates the RCT rig to the specified angles
+
+    Args:
+        angle (Angle): A (named) tuple containing (rot, x, y, z) in degrees
+
+    Returns:
+        boolean: True if rig was rotated
+    """
+    
+    object = bpy.data.objects['RCT_Rig']
     if object is None:
         return False
-    object.rotation_euler = (math.radians(bankedAngle),
-                             math.radians(verAngle), math.radians(midAngle))
-    vJoint = object.children[0]
-    vJoint.rotation_euler = (0, 0, math.radians(angle))
+    if type(angle) != Angle:
+        angle = Angle._make(angle)
+    object.rotation_euler = (math.radians(angle.x), math.radians(angle.y), math.radians(angle.z))
+    vJoint = bpy.data.objects['RCT_VerticalJoint']  # type: bpy.types.Object
+    vJoint.rotation_euler = (0, 0, math.radians(angle.rot))
     return True
 
 
-def post_render(context, index, crop=True):
-    magick_path = "magick"
-    output_path = get_output_path(context, index)
+def reset_rig():
+    """Resets the RCT rig angle"""
+    rotate_rig((0, 0, 0, 0))
 
-    palette_path = context.scene.rct_graphics_helper_general_properties.palette_path
 
-    result = ""
-    if crop:
-        result = str(subprocess.check_output(
-            magick_path + " \"" + output_path + "\" -fuzz 0 -fill none "
-            "-opaque rgb(57,59,57)  -quantize RGB -dither FloydSteinberg -define "
-            "dither:diffusion-amount=30% -remap \"" + palette_path + "\" -colorspace sRGB "
-            "-bordercolor none -border 1 -trim -format  \"%[fx:page.x - page.width/2] "
-            "%[fx:page.y - page.height/2]\" -write info: \"" + output_path + "\"", shell=True))
+def post_render(images_start, total_images, remap, context):
+    
+    gmic = "gmic"
+    gmic_script_path = get_res_path("remap.gmic")
+    
+    no_remap_palette_path = get_res_path("noremap1.png")
+    preview_path = get_output_path("preview/")
+    images_path = get_output_path("images/")
+    if not os.path.exists(preview_path):
+        os.mkdir(preview_path)
+    if not os.path.exists(images_path):
+        os.mkdir(images_path)
+    
+    dither_threshold = context.scene.rct_graphics_helper_general_properties.dither_threshold
+    edge_darkening = context.scene.rct_graphics_helper_general_properties.edge_darkening
+    blur_amount = 0
+    positions = []
+    if remap > 0:
+        if remap == 2:
+            no_remap_palette_path = get_res_path("noremap2.png")
+        if remap == 3:
+            no_remap_palette_path = get_res_path("noremap3.png")
+        remap1_palette_path = get_res_path("remap1.png")
+        remap2_palette_path = get_res_path("remap2.png")
+        remap3_palette_path = get_res_path("remap3.png")
+        remap1_images = []
+        remap2_images = []
+        remap3_images = []
+        noremap_images = []
 
-        offset_file = open(get_offset_output_path(context, index), "w")
-        offset_file.write(result[2:][:-1])
-        offset_file.close()
+        # Cut off Blender's frame number
+        base_path = get_output_path("TMP/noremap/")
+        old_image_names = os.listdir(base_path)
+        for old_image_name in old_image_names:
+            new_image_path = base_path + old_image_name[:10]
+            rename(base_path + old_image_name, new_image_path)
+            noremap_images.append(new_image_path)
+        # Do the same for all applicable remap images
+        base_path = get_output_path("TMP/remap1/")
+        old_image_names = os.listdir(base_path)
+        for old_image_name in old_image_names:
+            new_image_path = base_path + old_image_name[:10]
+            rename(base_path + old_image_name, new_image_path)
+            remap1_images.append(new_image_path)
+        if remap > 1:
+            base_path = get_output_path("TMP/remap2/")
+            old_image_names = os.listdir(base_path)
+            for old_image_name in old_image_names:
+                new_image_path = base_path + old_image_name[:10]
+                rename(base_path + old_image_name, new_image_path)
+                remap2_images.append(new_image_path)
+            if remap > 2:
+                base_path = get_output_path("TMP/remap3/")
+                old_image_names = os.listdir(base_path)
+                for old_image_name in old_image_names:
+                    new_image_path = base_path + old_image_name[:10]
+                    rename(base_path + old_image_name, new_image_path)
+                    remap3_images.append(new_image_path)
+        
+        # Palettize with gmic...
+        process = subprocess.run([
+            gmic, '-verbose', '0', no_remap_palette_path, *noremap_images, gmic_script_path,
+            'IndexAllNoRemap[^0]', '[0],%s,%s,%s' % (dither_threshold, edge_darkening, blur_amount),
+            '-OutputOffset[^0]', '%s,%s' % (images_start, get_output_path('TMP/noremap/Indexed'))])
+        # print("the commandline is {}".format(subprocess.list2cmdline(process.args)))
+        process = subprocess.run([
+            gmic, '-verbose', '0', remap1_palette_path, *remap1_images, gmic_script_path,
+            'IndexAllRemap[^0]', '[0],%s,%s,%s' % (dither_threshold, edge_darkening, blur_amount),
+            '-OutputOffset[^0]', '%s,%s' % (images_start, get_output_path('TMP/remap1/Indexed'))])
+        if remap > 1:
+            process = subprocess.run([
+                gmic, '-verbose', '0', remap2_palette_path, *remap2_images, gmic_script_path,
+                'IndexAllRemap[^0]', '[0],%s,%s,%s' % (dither_threshold, edge_darkening, blur_amount),
+                '-OutputOffset[^0]', '%s,%s' % (images_start, get_output_path('TMP/remap2/Indexed'))])
+            if remap > 2:
+                process = subprocess.run([
+                    gmic, '-verbose', '0', remap3_palette_path, *remap3_images, gmic_script_path,
+                    'IndexAllRemap[^0]', '[0],%s,%s,%s' % (dither_threshold, edge_darkening, blur_amount),
+                    '-OutputOffset[^0]', '%s,%s' % (images_start, get_output_path('TMP/remap3/Indexed'))])
 
+        full_palette_path = get_res_path("full.png")
+        for animation_frame in range(images_start, total_images + images_start):
+            indexed_paths = [get_output_path("TMP/noremap/Indexed%s.png" % animation_frame)]
+            indexed_paths.append(get_output_path("TMP/remap1/Indexed%s.png" % animation_frame))
+            if remap > 1:
+                indexed_paths.append(get_output_path("TMP/remap2/Indexed%s.png" % animation_frame))
+                if remap > 2:
+                    indexed_paths.append(get_output_path("TMP/remap3/Indexed%s.png" % animation_frame))
+            out_path = get_output_path("images/%s.png" % animation_frame)
+            preview_image = get_output_path("preview//%s.png" % animation_frame)
+            process = subprocess.run([gmic, '-verbose', '0', full_palette_path, *indexed_paths, gmic_script_path,
+                                     'Compose[^0]', '[0]', '-o[1]', out_path, '-o[2]', preview_image],
+                                     stdout=subprocess.PIPE)
+            # print("the commandline is {}".format(subprocess.list2cmdline(process.args)))
+            a = process.stdout.decode('utf-8')[:-1]
+            positions.extend(a.split('\n'))
+    
+    elif remap == 0:
+        for animation_frame in range(images_start, total_images + images_start):
+            frame = str(animation_frame).zfill(6)
+            image_path = get_output_path("TMP/" + frame + ".png")
+            process = subprocess.run([
+                gmic, '-verbose', '0', no_remap_palette_path, image_path, gmic_script_path,
+                'IndexAllNoRemap[^0]', '[0],{},{},{}'.format(dither_threshold, edge_darkening, blur_amount),
+                'Compose[1]', '[0]', '-o[1]', get_output_path('images/%s.png' % animation_frame), '-o[2]',
+                get_output_path('preview/%s.png' % animation_frame)], stdout=subprocess.PIPE)
+            
+            a = process.stdout.decode('utf-8')[:-1]
+            positions.extend(a.split('\n'))
+    # Create mask image from alpha
     else:
-        result = str(subprocess.check_output(
-            magick_path + " \"" + output_path + "\" -fuzz 0 -fill none -opaque rgb(57,59,57)  -quantize RGB"
-            " -dither FloydSteinberg -define dither:diffusion-amount=30% -remap \"" + palette_path
-            + "\" -colorspace sRGB \"" + output_path + "\"", shell=True))
-        return
+        images = []
+        for animation_frame in range(images_start, total_images + images_start):
+            frame = str(animation_frame).zfill(6)
+            images.append(get_output_path("TMP/" + frame + ".png"))
+        process = subprocess.run([
+            gmic, '-verbose', '0', *images, gmic_script_path, '-Mask', '55', '-OutputOffset',
+            '%s,%s' % (images_start, images_path), '-OutputOffset',
+            '%s,%s' % (images_start, preview_path)], stdout=subprocess.PIPE)
+        a = process.stdout.decode('utf-8')[:-1]
+        positions.extend(a.split('\n'))
+    
+    json_images = []
+    for i in range(total_images):
+        path = "images/%s.png" % (i + images_start)
+        x, y = positions[i].split(',')
+        json_images.append(JsonImage(path, x, y))
+
+    # print(json_images)
+    json_functions.json_data["images"] = json_images
+    # output_path = get_output_path(context, index)
 
 
-def mask(context, base, mask, output, operation="In"):
-    magick_path = "magick"
-    output_path = get_output_path(context, output)
-    base_path = get_output_path(context, base)
-    mask_path = get_output_path(context, mask)
-
-    result = str(subprocess.check_output(
-        magick_path + " \"" + mask_path + "\" +repage -gravity center \"" + base_path + "\" -compose "
-        + operation + " -composite \"" + output_path + "\"", shell=True))
-    return
+RenderTaskSection = namedtuple(
+    'RenderTaskSection', 'angles remap render_layer scene_layers animation_index animation_count x_tiles y_tiles')
 
 
-class AngleSectionTask(object):
-    section = None
-    frame = None
-    frame_index = 0
-    anim_start = 0
-    anim_count = 1
-    anim_index = 0
-    sub_index = 0
-    out_index = None
+class RenderTaskSectionWorker(object):
+    angles = []  # List of Angles
+    angle_index = 0  # Curent index into list of Angles
+    total_angles = 4  # Total Angles to render
+
+    anim_start = 0  # The starting animation frame
+    anim_index = 0  # Current animation frame
+    total_anim = 1  # Total animation frames to render
+
+    x_index = 0  # Current indexes into tile grid
+    y_index = 0  #
+    total_x = 1  # Total tiles (x and y)
+    total_y = 1  #
+
+    images_start = 0  # Starting index to use for images out
+    image_index = 0  # Current index to use for an image
+    total_images = 1  # Total images to render
+
     status = "CREATED"
-    inverted = False
-    context = None
-    render_layer = 0
-    width = 1
-    height = 1
+    context = None  # type: bpy.context
+    render_layer = ""
+    remap = 0
 
-    def __init__(self, section_in, out_index_start, context):
+    scene_layers = []
+    has_sub_tiles = False
+
+    def __init__(self, section_in: RenderTaskSection, out_index_start, context):
+        self.angles = section_in.angles
+        self.remap = section_in.remap
         self.render_layer = section_in.render_layer
-        self.inverted = section_in.inverted
-        self.section = section_in.angle_section
-        self.out_index = out_index_start
-        self.anim_start = section_in.anim_frame_index
-        self.anim_count = section_in.anim_frame_count
+        self.scene_layers = section_in.scene_layers
+        self.anim_start = section_in.animation_index
+        self.total_anim = section_in.animation_count
+        self.total_x = section_in.x_tiles
+        self.total_y = section_in.y_tiles
+        self.images_start = out_index_start
         self.frame = None
-        self.frame_index = 0
-        self.sub_index = 0
-        self.anim_index = 0
+        self.image_index = self.images_start
+        self.angle_index = 0
+        self.total_angles = len(self.angles)
+        self.anim_index = self.anim_start
+        self.total_images = self.total_angles * self.total_anim * self.total_x * self.total_y
         self.status = "CREATED"
         self.context = context
-        self.width = section_in.width
-        self.height = section_in.height
-        self.wx = 0
-        self.wy = 0
-        self.sub_tiles = False
+        self.x_index = 0
+        self.y_index = 0
+        self.has_sub_tiles = self.total_x > 1 or self.total_y > 1
 
     def step(self):
-        if self.frame_index == len(self.section):
-            self.status = "FINISHED"
-        self.frame = self.section[self.frame_index]
+        if self.angle_index == self.total_angles:
+            self.angle_index = 0
+            self.anim_index += 1
+        if self.anim_index == self.total_anim:
+            self.anim_index = self.anim_start
+            self.x_index += 1
+        if self.has_sub_tiles:
+            if self.x_index == self.total_x:
+                self.x_index = 0
+                self.y_index += 1
+            if self.y_index == self.total_y:
+                self.y_index = 0
+        
+        # print("Current index: %s (going to %s), with %s total images this run" % (
+        #     self.image_index, self.images_start + self.total_images - 1, self.total_images))
 
-        if self.frame_index == 0:
-            mask_layer(self.render_layer, self.context)
+        # Set up scene for this image
+        rotate_rig(self.angles[self.angle_index])
+        self.context.scene.frame_set(self.anim_index)
+        if self.has_sub_tiles:
+            pass
 
-        frame = self.frame
-        angle = 0
-        if frame[0]:
-            angle = 45
-        if frame[1] == 2:
-            angle += 90 * self.sub_index
+        # Set up render
+        self.context.scene.layers = [i in self.scene_layers for i in range(20)]
+        render_layers = self.context.scene.render.layers
+        for layer in render_layers:
+            layer.use = False
+        render_layers.get(self.render_layer).use = True
+        if self.remap > 0:
+            self.context.scene.use_nodes = True
+            self.context.scene.node_tree.nodes.get("Render Layers").layer = self.render_layer
+            file_out_node = bpy.data.node_groups.get('RCT_RemapOutput').nodes["File Output"]
+            filename = str(self.image_index).zfill(6) + ".png"
+            file_out_node.file_slots[0].path = "noremap/" + filename
+            file_out_node.file_slots[1].path = "remap1/" + filename
+            file_out_node.file_slots[2].path = "remap2/" + filename
+            file_out_node.file_slots[3].path = "remap3/" + filename
+            render(self.context, filename)
         else:
-            angle += 360 / frame[1] * self.sub_index
+            self.context.scene.use_nodes = False
+            filename = str(self.image_index).zfill(6) + ".png"
+            render(self.context, filename)
 
-        extra_roll = 0
-        if self.inverted:
-            extra_roll = 180
-
-        has_sub_tiles = self.width > 1 or self.height > 1
-
-        self.context.scene.frame_set(self.anim_start + self.anim_index)
-        rotate_rig(self.context, angle,
-                   frame[2], frame[3] + extra_roll, frame[4])
-
-        if self.sub_tiles:
-            wh = rotate_for_vertical_joint(-1, -1)
-            if wh[0] < 0:
-                wh[0] = 0
-            if wh[1] < 0:
-                wh[1] = 0
-            xy = rotate_for_vertical_joint(self.wx, self.wy)
-            position_cookie_cutter(self.context, self.wx, self.wy, abs(
-                xy[0]) == wh[1] * (self.height - 1), abs(xy[1]) == wh[0] * (self.width - 1), True)
-        else:
-            position_cookie_cutter(self.context, 0, 0, False, False, False)
-
-        output = self.out_index
-        if has_sub_tiles:
-            output = "full" + "_" + str(self.out_index)
-        if has_sub_tiles and self.sub_tiles:
-            output = (self.wy * self.width + self.wx) * \
-                frame[1] + self.out_index
-        render(self.context, output)
-        post_render(self.context, output, not has_sub_tiles)
-
-        if self.sub_tiles:
-            if self.wx == self.width - 1:
-                self.wx = 0
-                if self.wy == self.height - 1:
-                    self.wy = 0
-                    self.sub_tiles = False
-                    self.anim_index += 1
-
-                    for i in range(self.width):
-                        for j in range(self.height):
-                            index = (j * self.width + i) * \
-                                frame[1] + self.out_index
-                            mask(self.context, index, index,
-                                 "c_" + str(index), "Dst")
-
-                    for i in range(self.width):
-                        for j in range(self.height):
-                            posx = rotate_for_vertical_joint(1, 0)
-                            posy = rotate_for_vertical_joint(0, 1)
-                            index = (j * self.width + i) * \
-                                frame[1] + self.out_index
-                            indexx2 = (
-                                (j + posx[1]) * self.width + (i + posx[0])) * frame[1] + self.out_index
-                            indexy2 = (
-                                (j + posy[1]) * self.width + (i + posy[0])) * frame[1] + self.out_index
-                            if (i + posx[0] < self.width
-                                    and j + posx[1] < self.height
-                                    and i + posx[0] >= 0
-                                    and j + posx[1] >= 0):
-                                mask(self.context, "c_" + str(index),
-                                     str(indexx2), "c_" + str(index), "Out")
-                            if (i + posy[0] < self.width
-                                    and j + posy[1] < self.height
-                                    and i + posy[0] >= 0
-                                    and j + posy[1] >= 0):
-                                mask(self.context, "c_" + str(index),
-                                     str(indexy2), "c_" + str(index), "Out")
-
-                    for i in range(self.width):
-                        for j in range(self.height):
-                            index = (j * self.width + i) * \
-                                frame[1] + self.out_index
-                            mask(self.context, "c_" + str(index), "full"
-                                 + "_" + str(self.out_index), index, "Dst_In")
-                            os.remove(get_output_path(
-                                self.context, "c_" + str(index)))
-                            post_render(self.context, index)
-
-                    self.out_index += 1
-                else:
-                    self.wy += 1
-            else:
-                self.wx += 1
-        else:
-            if has_sub_tiles:
-                if not self.sub_tiles:
-                    self.sub_tiles = True
-            else:
-                self.anim_index += 1
-                self.out_index += 1
-
-        if self.anim_index == self.anim_count:
-            self.anim_index = 0
-            self.sub_index += 1
-        if self.sub_index == self.frame[1]:
-            self.sub_index = 0
-            self.frame_index += 1
-        if self.frame_index == len(self.section):
+        self.angle_index += 1
+        self.image_index += 1
+        if self.image_index >= self.total_images + self.images_start:
+            # print("Finished: %s out of %s total" % (self.image_index, self.total_images))
+            post_render(self.images_start, self.total_images, self.remap, self.context)
             self.status = "FINISHED"
             return "FINISHED"
         self.status = "RUNNING"
         return "RUNNING"
-
-
-class RenderTaskSection(object):
-    angle_section = None
-    inverted = False
-    render_layer = 0
-    anim_frame_index = 0
-    anim_frame_count = 1
-    width = 1
-    height = 1
-
-    def __init__(self, angle_section, render_layer=0, inverted=False, frame_index=0, frame_count=1, width=1, height=1):
-        self.angle_section = angle_section
-        self.inverted = inverted
-        self.render_layer = render_layer
-        self.anim_frame_index = frame_index
-        self.anim_frame_count = frame_count
-        self.width = width
-        self.height = height
 
 
 class RenderTask(object):
@@ -306,11 +492,16 @@ class RenderTask(object):
     section_index = 0
     status = "CREATED"
     section_task = None
-    out_index = 0
     context = None
     use_antialiasing = False
 
-    def __init__(self, out_index_start, context):
+    def __init__(self, context, out_index_start=0):
+        """Creates a new RenderTask object
+
+        :param out_index_start: index to use for first rendered image
+        :type rotAngle: int
+        """
+
         self.out_index = out_index_start
         self.sections = []
         self.section_index = 0
@@ -319,24 +510,45 @@ class RenderTask(object):
         self.context = context
         self.use_antialiasing = context.scene.render.use_antialiasing
 
-    def add(self, angle_section, render_layer=0, inverted=False, frame_index=0, frame_count=1, width=1, height=1):
-        self.sections.append(RenderTaskSection(
-            angle_section, render_layer, inverted, frame_index, frame_count, width, height))
+    def add(self, angles=[Angle(0, 0, 0, 0)], remap=0, render_layer="", scene_layers=[0, 10],
+            animation_frame_index=0, animation_frame_count=1, x_tiles=1, y_tiles=1):
+        """Adds a render task section
+
+        Args:
+            angles (list[Angle], optional): list of Angles for this section
+            remap (int, optional): If >0, the number of remappable colors. If 0, a normal image
+            with no remappable colors. If -1, renders a flat mask. Defaults to 0.
+            render_layer (str, optional): Name of the render layer to use. Defaults to "".
+            scene_layers (list[int], optional): List of the scene layers to have enabled for this
+                section. Defaults to [0, 10].
+            frame_index (int, optional): Index to use for first rendered image. Defaults to 0.
+            frame_count (int, optional): Number of frames to render. Defaults to 1.
+            x_tiles (int, optional): (for large scenery) The number of tiles in the x direction
+                to render. Defaults to 1.
+            y_tiles (int, optional): (for large scenery) The number of tiles in the y direction
+            to render. Defaults to 1.
+        """
+        
+        self.sections.append(
+            RenderTaskSection(angles, remap, render_layer, scene_layers,
+                              animation_frame_index, animation_frame_count, x_tiles, y_tiles))
 
     def step(self):
         if self.section_task is None:
+            # print(self.sections)
+            if self.sections == []:
+                self.status = "FINISHED"
+                return "FINISHED"
             section = self.sections[self.section_index]
-            self.section_task = AngleSectionTask(
-                section, self.out_index, self.context)
+            self.section_task = RenderTaskSectionWorker(section, self.out_index, self.context)
 
         result = self.section_task.step()
-        self.out_index = self.section_task.out_index
+        self.out_index = self.section_task.image_index
 
         if result == "FINISHED":
             self.section_task = None
             self.section_index += 1
 
             if self.section_index == len(self.sections):
-                position_cookie_cutter(self.context, 0, 0, False, False, False)
                 self.status = "FINISHED"
                 return "FINISHED"

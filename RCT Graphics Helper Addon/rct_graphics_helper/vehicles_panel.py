@@ -1,5 +1,5 @@
 '''
-Copyright (c) 2018 RCT Graphics Helper developers
+Copyright (c) 2021 RCT Graphics Helper developers
 
 For a complete list of all authors, please refer to the addon's meta info.
 Interested in contributing? Visit https://github.com/oli414/Blender-RCT-Graphics
@@ -12,7 +12,7 @@ import math
 import os
 
 from . render_operator import RCTRender
-from . angle_sections.track import track_angle_sections, track_angle_sections_names
+from . track import track_angle_sections, track_angle_sections_names
 from . render_task import *
 
 
@@ -185,6 +185,12 @@ class VehiclesPanel(bpy.types.Panel):
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "render"
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context):
+        return False  # Disabled for now
+        general_properties = context.scene.rct_graphics_helper_general_properties
+        return general_properties.objectType == "scenery_small"
 
     def draw(self, context):
         layout = self.layout

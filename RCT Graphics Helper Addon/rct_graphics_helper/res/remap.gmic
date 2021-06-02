@@ -1,0 +1,146 @@
+#@gmic IndexAllNoRemap : [palette image],{ditherlevel=0.35},{edge_darkening=1.0},{blur_amount=0.3}
+#@gmic : Remaps all selected images to use the colors
+#@gmic : in the given palette, with the given ditherlevel
+IndexAllRemap : -skip ${2=0.35},${3=1.0},${4=0.3}
+    # $1=palette
+    # $2=ditherlevel
+    
+    -pass$1  # Add an exterior image to this command's scope (in this case, the specified palette image)
+    -name[-1] "palette"  # Give that image we just added a label
+    -move[palette] 0  # And move it to the start of our list
+    -verbose -  # Temporarily decrease verbosity for this loop
+    -repeat {$!-1} local[0,{$>+1}]  # Start a loop with a local list, using the palette and successive image to remap
+        -OpenIndexRemap [-2],[-1],$2,$3,$4
+    -endlocal done
+    -verbose +
+    -remove[0]  # Remove the extra palette image we passed into this scope
+
+
+#@gmic OpenIndexRemap : [palette image],[image to remap],{ditherlevel=0.35},{edge_darkening=1.0},{blur_amount=0.3}
+#@gmic : OpenIndexRemap
+OpenIndexRemap : -skip ${3=0.35},${4=1.0},${5=0.3}
+    # $1=palette image
+    # $2=remapping image
+    # $3=ditherlevel
+    # $4=edge_darkening
+    # $5=blur_amount
+
+    -name$1 "remap"
+    -name$2 "im"
+    # -div[im] {65535/255}  # Blender outputs 16bit PNGs for some reason, should disable this in the future
+    -input [im] -name[-1] "alpha"  # Make a copy of the input image
+    -channels[alpha] 3 -threshold[alpha] 16 -mul[alpha] 255  # And pull out just the alpha channel
+    -to_gray[im] -n[im] 0,255  # Convert the image to greyscale
+    -blur[im] $5
+    -input [alpha]
+    -blur[-1] {(2^$4-1)*1.0} -cut[-1] 50%,80% -n[-1] 0,1
+    -mul[im] [-1]
+    -remove[-1]
+    -input [remap],[remap],1,1,'y*255/(h-1)'
+    -index[im] [-1],$3,0 # Remap our image to a greyscale palette of the right size
+    -remove[-1]  # Remove our temp palette
+    -map[im] [remap]  # And then map that onto our palette
+    -append[im] [alpha],c  # Add back in the alpha we saved before
+    -remove[alpha]  # And remove the separate alpha image
+
+
+#@gmic IndexAllNoRemap : [palette image],{ditherlevel=0.35},{edge_darkening=1.0},{blur_amount=0.3}
+#@gmic : Remaps all selected images to use the colors
+#@gmic : in the given palette, with the given ditherlevel
+IndexAllNoRemap : -skip ${2=0.35},${3=1.0},${4=0.3}
+    # $1=palette
+    # $2=ditherlevel
+    # $3=edge_darkening
+    # $4=blur_amount
+    
+    -pass$1  # Add an exterior image to this command's scope (in this case, the specified palette image)
+    -name[-1] "palette"  # Give that image we just added a label
+    -move[palette] 0  # And move it to the start of our list
+    -verbose -  # Temporarily decrease verbosity for this loop
+    -repeat {$!-1} local[0,{$>+1}]  # Start a loop with a local list, using the palette and successive image to remap
+        -OpenIndexNoRemap [-2],[-1],$2,$3,$4
+    -endlocal done
+    -verbose +
+    -remove[0]  # Remove the extra palette image we passed into this scope
+
+
+#@gmic OpenIndexNoRemap : [palette image],[image to remap],{ditherlevel=0.35},{edge_darkening=1.0},{blur_amount=0.3}
+#@gmic : OpenIndexNoRemap
+OpenIndexNoRemap : -skip ${3=0.35},${4=1.0},${5=0.3}
+    # $1=palette image
+    # $2=remapping image
+    # $3=ditherlevel
+    # $4=edge_darkening
+    # $5=blur_amount
+
+    -name$1 "remap"
+    -name$2 "im"
+    # -div[im] {65535/255}  # Blender outputs 16bit PNGs for some reason, should disable this in the future
+    -input [im] -name[-1] "alpha"  # Make a copy of the input image
+    -channels[alpha] 3 -threshold[alpha] 16 -mul[alpha] 255  # And pull out just the alpha channel
+    -blur[im] $5
+    -input [alpha]
+    -blur[-1] {(2^$4-1)*1.0} -cut[-1] 50%,80% -n[-1] 0,1
+    -mul[im] [-1]
+    -remove[-1]
+    -input [im],[im],[im],[im],'[23,35,35,255]'  # Add a new image filled with dark grey background
+    -blend[-1] [im],alpha  # Blend our input onto the grey background image
+    -remove[im] name[-1] "im"  # Now we can remove the original image
+    -remove_opacity[im]  # Remove the (fully opaque) alpha layer
+    -index[im] [remap],$3,1  # Remap our image to the specified palette
+    -append[im] [alpha],c  # Add back in the alpha we saved before
+    -remove[alpha]  # And remove the separate alpha image
+
+
+#@gmic Compose : [standard palette]
+#@gmic : Compose
+#@gmic Compose
+Compose : 
+    # $1=standard palette image
+    
+    # Pass the specified palette into this command context and move it to the start of our image list
+    -pass$1 -name[-1] "palette" -move[palette] 0
+    # Add a new image filled with transparent background. We'll paste everthing on top of this
+    -input [-1],[-1],[-1],[-1],'[0,0,0,255]' -move[-1] 1
+    -verbose -  # Temporarily decrease verbosity for this loop
+    # Start a loop with a local list, using two images to composite
+    -repeat {$!-2} local[1,2]
+        -blend[-2] [-1],alpha  # Blend our second input over our first
+        -remove[-1]  # Now we can remove that image
+    -endlocal done -verbose +
+    -remove_opacity[-1]  # We don't need any alpha channel anymore
+    -index[-1] [-2],0,0  # Remap our image to the specified palette
+    # -remove[0]  # Remove the extra palette image we passed into this scope
+    # Hacky-ish way of getting the output from the autocrop
+    [-1]
+    -autocrop[-2]
+    -echo_stdout {{-1,xM}-{-2,xM}-128}","{{-1,yM}-{-2,yM}-128}
+    -remove[-1]
+    -autocrop[-1]
+    # Make a copy of the image to save as a preview with the palette actually mapped to RGB
+    +map[-1] [0]
+    -remove[0]
+
+#@gmic OutputOffset : [starting index],[filepath]
+#@gmic : Outputs a series of images at the given filepath, but starting at
+#@gmic : the given index instead of at 0, like it normally would
+OutputOffset :
+    #-display
+    #-echo_stdout $1,$2
+    -repeat {$!} local[$>]
+        #-echo_stdout $2{$>+$1}.png
+        -o $2{$>+$1}.png
+    -endlocal done
+
+#@gmic Mask : [solid index]
+#@gmic : Turns image into a binary mask based on alpha channel, using given
+#@gmic : index for everywhere that is solid, and 0 otherwise.
+Mask : -skip ${1=55}
+    -channels 3 -threshold 5 -mul $1
+    -repeat {$!} local[$>]
+        [-1]
+        -autocrop[-2]
+        -echo_stdout ", \"x\": "{{-1,xM}-{-2,xM}-128}," \"y\": "{{-1,yM}-{-2,yM}-128}
+        -remove[-1]
+        -autocrop[-1]
+    -endlocal done

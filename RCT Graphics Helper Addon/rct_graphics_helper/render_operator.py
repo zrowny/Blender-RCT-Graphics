@@ -1,5 +1,5 @@
 '''
-Copyright (c) 2018 RCT Graphics Helper developers
+Copyright (c) 2021 RCT Graphics Helper developers
 
 For a complete list of all authors, please refer to the addon's meta info.
 Interested in contributing? Visit https://github.com/oli414/Blender-RCT-Graphics
@@ -8,10 +8,14 @@ RCT Graphics Helper is licensed under the GNU General Public License version 3.
 '''
 
 import bpy
+import bpy.utils.previews
 import math
 import os
 
 from . render_task import *
+from . general_panel import *
+from . json_functions import *
+from bpy.app import driver_namespace
 
 
 class RCTRender(object):
@@ -19,11 +23,11 @@ class RCTRender(object):
     _timer = None
     rendering = False
     stop = False
-    renderTask = None
+    renderTask = None  # type: RenderTask
 
     @classmethod
     def poll(cls, context):
-        return bpy.data.objects['Rig'] is not None
+        return bpy.data.objects.get('RCT_Rig') is not None
 
     def pre(self, dummy):
         self.rendering = True
@@ -31,22 +35,27 @@ class RCTRender(object):
     def post(self, dummy):
         self.rendering = False
 
-    def cancelled(self, dummy):
+    def cancel(self, dummy):
         self.stop = True
 
     def execute(self, context):
-        rotate_rig(context, 0, 0, 0, 0)
-        bpy.data.cameras["Camera"].ortho_scale = 169.72 / \
-            (100 / bpy.data.scenes['Scene'].render.resolution_percentage)
+        reset_rig()
 
         self.rendering = False
         self.stop = False
 
-        bpy.app.handlers.render_pre.append(self.pre)
-        bpy.app.handlers.render_post.append(self.post)
-        bpy.app.handlers.render_cancel.append(self.cancelled)
-        self._timer = context.window_manager.event_timer_add(
-            0.5, context.window)
+        if os.path.exists(get_output_path("TMP/")):
+            shutil.rmtree(get_output_path("TMP/"))
+        add_general_properties_json(context)
+        
+        handlers = bpy.app.handlers
+        handlers.render_pre.clear()
+        handlers.render_post.clear()
+        handlers.render_cancel.clear()
+        handlers.render_pre.append(self.pre)
+        handlers.render_post.append(self.post)
+        handlers.render_cancel.append(self.cancel)
+        self._timer = context.window_manager.event_timer_add(0.05, context.window)
         context.window_manager.modal_handler_add(self)
 
         return {"RUNNING_MODAL"}
@@ -68,8 +77,13 @@ class RCTRender(object):
     def finished(self, context):
         bpy.app.handlers.render_pre.remove(self.pre)
         bpy.app.handlers.render_post.remove(self.post)
-        bpy.app.handlers.render_cancel.remove(self.cancelled)
+        bpy.app.handlers.render_cancel.remove(self.cancel)
         context.window_manager.event_timer_remove(self._timer)
 
-        rotate_rig(context, 0, 0, 0, 0)
-        bpy.data.cameras["Camera"].ortho_scale = 169.72
+        if os.path.exists(get_output_path("TMP/")):
+            shutil.rmtree(get_output_path("TMP/"))
+
+        preview_dir_update(context)
+        make_parkobj()
+
+        reset_rig()
