@@ -1,3 +1,11 @@
+'''
+Copyright (c) 2021 RCT Graphics Helper developers
+
+For a complete list of all authors, please refer to the addon's meta info.
+Interested in contributing? Visit https://github.com/oli414/Blender-RCT-Graphics
+
+RCT Graphics Helper is licensed under the GNU General Public License version 3.
+'''
 
 import bpy
 import math
@@ -11,17 +19,12 @@ from . render_task import *
 from . import custom_properties as custom_properties
 from . import json_functions as json_functions
 
-'''
-Copyright (c) 2021 RCT Graphics Helper developers
-
-For a complete list of all authors, please refer to the addon's meta info.
-Interested in contributing? Visit https://github.com/oli414/Blender-RCT-Graphics
-
-RCT Graphics Helper is licensed under the GNU General Public License version 3.
-'''
-
 
 def update_small_scenery(self, context: bpy.types.Context):
+    """Run when when various small scenery properties are updated.
+    
+    Updates the size preview, render layers, and small scenery properties that
+    may conflict with each other if they are set at the same time."""
     properties = self  # type: SmallSceneryProperties
     scene = context.scene
 
@@ -68,6 +71,7 @@ def update_small_scenery(self, context: bpy.types.Context):
 
 
 def update_shape(self, context):
+    """Updates the size preview based on the selected shape."""
     properties = self  # type: SmallSceneryProperties
     shape = properties.shape
     objects = bpy.data.objects
@@ -103,13 +107,18 @@ def update_shape(self, context):
 
 
 def update_FLAG17(self, context):
+    """Disables "Animated When Zoom" if "Static First Images" is set"""
     properties = self  # type: SmallSceneryProperties
     if properties.SMALL_SCENERY_FLAG17:
         properties["SMALL_SCENERY_FLAG_VISIBLE_WHEN_ZOOMED"] = False
     update_small_scenery(self, context)
 
 
+# Frame Offsets
+################
+
 def update_frameOffset_index(self, context):
+    """Runs when the selected frame offset changes."""
     properties = context.scene.rct_graphics_helper_small_scenery_properties
     frameOffsets = properties.frameOffsets
     if len(frameOffsets) > 0:
@@ -122,7 +131,7 @@ def update_frameOffset_index(self, context):
 
 
 class FrameOffsets_OT_actions(bpy.types.Operator):
-    """Move items up and down, add and remove"""
+    """Buttons to add/remove/move a frame offset entry."""
     bl_idname = "frameoffsets.actions"
     bl_label = "List Actions"
     bl_description = "Add\nAdd Current Frame\nRemove\n\nMove Up\nMove Down\n\nAuto Fill"
@@ -204,6 +213,7 @@ class FrameOffsets_OT_actions(bpy.types.Operator):
 
 
 class FrameOffsets_UL_List(bpy.types.UIList):
+    """Defines the drawing function for each frame offset item"""
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
             split = layout.split(0.4)
@@ -215,7 +225,54 @@ class FrameOffsets_UL_List(bpy.types.UIList):
             layout.label(text="FrameOffsets")
 
 
+def set_frame_offset_item(self, val):
+    """Runs when a frame offset value is set.
+    
+    Makes sure the value is at least 0, and if it's greater than the number of
+    blender frames (adding one if the first frame is a static image), increases
+    the number of blender frames to match."""
+    scene = bpy.context.scene
+    # type: SmallSceneryProperties
+    properties = scene.rct_graphics_helper_small_scenery_properties
+    end = bpy.context.scene.frame_end
+    bpy.context.scene.frame_start = 0
+    if val < 0:
+        val = 0
+    testval = val
+    if properties.SMALL_SCENERY_FLAG17 or properties.SMALL_SCENERY_FLAG_VISIBLE_WHEN_ZOOMED:
+        testval += 1
+    if testval > end:
+        scene.frame_end = testval
+
+    self['value'] = val
+    update_frameOffset_index(properties, bpy.context)
+
+
+def get_frame_offset_item(self):
+    """Returns the value of a frame offset item"""
+    return self['value']
+
+
+def get_num_frames(self):
+    """Returns the number of frame offsets that are specified."""
+    return len(self.frameOffsets)
+
+
+class FrameOffsetsItem(bpy.types.PropertyGroup):
+    """Defines a frame offset item. Has a "value"."""
+    value = bpy.props.IntProperty(
+        name="Frame Offset",
+        description=(
+            "For animated objects that don't use one of the special animation modes, this list (of frame "
+            "indexes) makes up the animation sequence for this object. These are indexes into the list of images, "
+            "starting at zero, where each index is for a set of 4 images (for the 4 angles)."),
+        default=0,
+        set=set_frame_offset_item,
+        get=get_frame_offset_item)
+
+
 def add_small_scenery_properties_json(context):
+    """Processes small scenery properties and adds them to the global JSON"""
     json_properties = json_functions.group_as_dict(context.scene.rct_graphics_helper_small_scenery_properties)
     json_properties.pop("frameOffsets_index", None)
     if json_properties.get("hasGlass", None):
@@ -253,6 +310,7 @@ def add_small_scenery_properties_json(context):
 
 
 class RenderSmallScenery(RCTRender, bpy.types.Operator):
+    """Operator to render small scenery objects."""
     bl_idname = "render.rct_small_scenery"
     bl_label = "Render RCT Small Scenery"
     
@@ -285,50 +343,13 @@ class RenderSmallScenery(RCTRender, bpy.types.Operator):
         return super().execute(context)
 
     def finished(self, context):
-        
+        """Runs when rendering is completely finished."""
         super().finished(context)
         self.report({'INFO'}, 'RCT Small Scenery render finished.')
 
 
-def set_frame_offset_item(self, val):
-    scene = bpy.context.scene
-    # type: SmallSceneryProperties
-    properties = scene.rct_graphics_helper_small_scenery_properties
-    end = bpy.context.scene.frame_end
-    bpy.context.scene.frame_start = 0
-    if val < 0:
-        val = 0
-    testval = val
-    if properties.SMALL_SCENERY_FLAG17 or properties.SMALL_SCENERY_FLAG_VISIBLE_WHEN_ZOOMED:
-        testval += 1
-    if testval > end:
-        scene.frame_end = testval
-
-    self['value'] = val
-    update_frameOffset_index(properties, bpy.context)
-
-
-def get_frame_offset_item(self):
-    return self['value']
-
-
-def get_num_frames(self):
-    return len(self.frameOffsets)
-
-
-class FrameOffsetsItem(bpy.types.PropertyGroup):
-    value = bpy.props.IntProperty(
-        name="Frame Offset",
-        description=(
-            "For animated objects that don't use one of the special animation modes, this list (of frame "
-            "indexes) makes up the animation sequence for this object. These are indexes into the list of images, "
-            "starting at zero, where each index is for a set of 4 images (for the 4 angles)."),
-        default=0,
-        set=set_frame_offset_item,
-        get=get_frame_offset_item)
-
-
 class SmallSceneryProperties(bpy.types.PropertyGroup):
+    """Defines the group of properties for small scenery objects."""
     previews = None
     
     height = custom_properties.height
@@ -551,6 +572,7 @@ class SmallSceneryProperties(bpy.types.PropertyGroup):
 
 
 class SmallSceneryPanel(bpy.types.Panel):
+    """Defines the drawing function for the RCT Small Scenery panel"""
     bl_label = "RCT Small Scenery"
     bl_idname = "RENDER_PT_rct_small_scenery"
     bl_space_type = 'PROPERTIES'
@@ -690,13 +712,11 @@ class SmallSceneryPanel(bpy.types.Panel):
 
 
 def register_small_scenery_panel():
-    # for cls in classes:
-    #     bpy.utils.register_class(cls)
+    """Registers the small scenery panel and properties"""
     bpy.types.Scene.rct_graphics_helper_small_scenery_properties = bpy.props.PointerProperty(
         type=SmallSceneryProperties)
 
 
 def unregister_small_scenery_panel():
-    # for cls in classes:
-    #     bpy.utils.unregister_class(cls)
+    """Unregisters the small scenery panel and properties"""
     del bpy.types.Scene.rct_graphics_helper_small_scenery_properties

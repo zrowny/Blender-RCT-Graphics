@@ -1,8 +1,9 @@
 
 # Blender
 *.blend1
+test
 
-# Python
+# Python cache
 __pycache__/
 
 # Output

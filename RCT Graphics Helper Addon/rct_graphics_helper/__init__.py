@@ -42,6 +42,7 @@ import traceback
 
 
 def register():
+    """Registers this Add-on."""
     try:
         bpy.utils.register_module(__name__)
     except:
@@ -56,6 +57,7 @@ def register():
 
 
 def unregister():
+    """Unregisters this Add-on."""
     try:
         bpy.utils.unregister_module(__name__)
     except:

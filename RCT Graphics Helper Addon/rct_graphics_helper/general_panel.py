@@ -19,6 +19,7 @@ from . custom_properties import create_size_preview
 
 
 def enum_previews_from_directory_items(self, context):
+    """Loads preview images from "./preview/", or loads the default image if nothing is rendered"""
     pcoll = render_operator.preview_collections.get("main")  # type: bpy.utils.previews.ImagePreviewCollection
 
     if not pcoll:
@@ -38,6 +39,7 @@ def enum_previews_from_directory_items(self, context):
 
 
 class RCTCreateRig(bpy.types.Operator):
+    """Create rendering rig and size preview"""
     bl_idname = "render.rct_create_rig"
     bl_label = "Create Rendering Rig"
 
@@ -194,8 +196,9 @@ class RCTCreateRig(bpy.types.Operator):
         return {"FINISHED"}
 
 
-def ToggleShadows(self, context):
-    shadow_caster = bpy.data.lamps['ShadowCasterLamp']
+def update_shadows(self, context):
+    """Enables/disables the shadow caster depending on the state of the "Cast Shadows" checkbox"""
+    shadow_caster = bpy.data.lamps['RCT_ShadowCaster']
     if shadow_caster is None:
         return False
     print(shadow_caster.shadow_method)
@@ -209,17 +212,21 @@ def ToggleShadows(self, context):
 
 
 def update_object_type(self, context):
+    """Runs update function for the given object type"""
     if self.objectType == "scenery_small":
         small_scenery_properties = context.scene.rct_graphics_helper_small_scenery_properties
         update_small_scenery(small_scenery_properties, context)
     pass
 
 
+# String entries
+##############################################
+
 class StringsEntries_OT_actions(bpy.types.Operator):
-    """Move items up and down, add and remove"""
+    """Buttons to add/remove/move a string entry."""
     bl_idname = "stringentries.actions"
     bl_label = "List Actions"
-    bl_description = "Add\nRemove\n\nMove Up\nMove Down"
+    bl_description = "Add/Remove\n\nMove Up/Down"
     bl_options = {'REGISTER'}
 
     args = bpy.props.StringProperty(
@@ -258,6 +265,7 @@ class StringsEntries_OT_actions(bpy.types.Operator):
 
 
 class StringsEntries_UL_List(bpy.types.UIList):
+    """Defines the drawing function for each string entry item"""
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
             split = layout.split(0.4)
@@ -270,6 +278,7 @@ class StringsEntries_UL_List(bpy.types.UIList):
 
 
 class StringsEntry(bpy.types.PropertyGroup):
+    """Defines a string entry item. Has a "language" and a "value"."""
     language = bpy.props.EnumProperty(
         items=[
             ("ar-EG", "Arabic (experimental)", "ar-EG"),
@@ -308,7 +317,11 @@ class StringsEntry(bpy.types.PropertyGroup):
     )
 
 
+# General Properties and Panel
+##############################
+
 class GeneralProperties(bpy.types.PropertyGroup):
+    """Defines the group of general properties for all object types."""
     id = bpy.props.StringProperty(
         name="OpenRCT2 ID",
         description="OpenRCT2 id of the object. This should be formatted as objectsource.objecttype.objectname."
@@ -392,10 +405,11 @@ class GeneralProperties(bpy.types.PropertyGroup):
         name="Cast Shadows",
         description="Controls whether or not the render contains shadows. Should be disabled for vehicles",
         default=False,
-        update=ToggleShadows)
+        update=update_shadows)
 
 
 class GeneralPanel(bpy.types.Panel):
+    """Defines the drawing function for the RCT General panel"""
     bl_label = "RCT General"
     bl_idname = "RENDER_PT_rct_general"
     bl_space_type = 'PROPERTIES'
@@ -407,15 +421,16 @@ class GeneralPanel(bpy.types.Panel):
         scene = context.scene
         wm = context.window_manager
         general_properties = scene.rct_graphics_helper_general_properties
-
+        # Draw previews
         row = layout.row()
         col = row.column()
         col.label("Preview")
         col.template_icon_view(wm, "my_previews", show_labels=True, scale=3.0)
         col.prop(wm, "my_previews", text="")
+        # Set up render rig button
         row = layout.row()
         row.operator("render.rct_create_rig", text="Set Up Rendering Rig")
-
+        # Basic object properties
         col = layout.column(align=True)
         row = col.row(align=True)
         row.prop(general_properties, "id")
@@ -425,11 +440,10 @@ class GeneralPanel(bpy.types.Panel):
         row.prop(general_properties, "authors")
         row = col.row(align=True)
         row.prop(general_properties, "sourceGame")
-        
         row = layout.row().split(0.7, align=True)
         row.prop(general_properties, "objectType")
         row.prop(general_properties, "version")
-
+        # Name Strings
         col = layout.column()
         head = col.row()
         head.label("Name:")
@@ -443,7 +457,7 @@ class GeneralPanel(bpy.types.Panel):
         subcol.separator()
         subcol.operator("stringentries.actions", icon='TRIA_UP', text="").args = 'UP,name'
         subcol.operator("stringentries.actions", icon='TRIA_DOWN', text="").args = 'DOWN,name'
-
+        # Description Strings
         col = layout.column()
         head = col.row()
         head.label("Description:")
@@ -457,7 +471,7 @@ class GeneralPanel(bpy.types.Panel):
         subcol.separator()
         subcol.operator("stringentries.actions", icon='TRIA_UP', text="").args = 'UP,description'
         subcol.operator("stringentries.actions", icon='TRIA_DOWN', text="").args = 'DOWN,description'
-
+        # Capacity Strings
         col = layout.column()
         head = col.row()
         head.label("Capacity:")
@@ -471,7 +485,7 @@ class GeneralPanel(bpy.types.Panel):
         subcol.separator()
         subcol.operator("stringentries.actions", icon='TRIA_UP', text="").args = 'UP,capacity'
         subcol.operator("stringentries.actions", icon='TRIA_DOWN', text="").args = 'DOWN,capacity'
-
+        # Render Settings
         row = layout.row()
         row.prop(general_properties, "dither_threshold")
         row.prop(general_properties, "edge_darkening")
@@ -479,13 +493,18 @@ class GeneralPanel(bpy.types.Panel):
         row.prop(general_properties, "cast_shadows")
 
 
+# Hacky way to have code run on initialization
+##############################################
+
 def collhack(scene):
+    """Runs initial code for initialization of this panel"""
     bpy.app.handlers.scene_update_pre.remove(collhack)
     update_object_type(
         scene.rct_graphics_helper_general_properties, bpy.context)
 
 
 def register_general_panel():
+    """Registers the general panel and general properties"""
     pcoll = render_operator.preview_collections.setdefault("main", bpy.utils.previews.new())
     bpy.types.WindowManager.my_previews = bpy.props.EnumProperty(
         items=enum_previews_from_directory_items)
@@ -495,6 +514,7 @@ def register_general_panel():
 
 
 def unregister_general_panel():
+    """Unregisters the general panel and general properties"""
     render_operator.removePreviews()
     del bpy.types.WindowManager.my_previews
     del bpy.types.Scene.rct_graphics_helper_general_properties

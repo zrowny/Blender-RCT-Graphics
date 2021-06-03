@@ -21,34 +21,42 @@ from . import json_functions
 
 
 def get_res_path(path):
+    """Returns the absolute path of something in the Add-on's `res` folder
+
+    Args:
+        path (str): A path to something in the Add-on's `res` folder
+    """
     script_file = os.path.realpath(__file__)
     directory = os.path.dirname(script_file) + "/res/"
     return directory + path
 
 
-def get_output_path(filename):
-    """Returns the absolute path, given the filename of something in the `output` folder
+def get_output_path(path):
+    """Returns the absolute path of something in the .blend's `output` folder
 
     Args:
-        filename (str):
-
-    Returns:
-        str:
+        path (str): the path of something in the `output` folder
     """
-    rawpath = bpy.path.abspath("//output/" + filename)  # type: str
+    rawpath = bpy.path.abspath("//output/" + path)  # type: str
     return rawpath
 
 
 def rename(filename, new_filename):
+    """Renames a file, replacing if the new name already exists
+
+    Args:
+        filename (str): Absolute path to the file
+        new_filename (str): Absolute path with the file's new name
+    """
     filename = os.path.normpath(filename)
     new_filename = os.path.normpath(new_filename)
-    # try:
-    #     if os.path.exists(new_filename):
-    #         os.remove(new_filename)
-    # except:
-    #     print("Cannot rename %s, perhaps %s is in use? Continuing with old image" % (
-    #         bpy.path.relpath(filename), bpy.path.relpath(new_filename)))
-    #     return
+    try:
+        if os.path.exists(new_filename):
+            os.remove(new_filename)
+    except:
+        print("Cannot rename %s, perhaps %s is in use? Continuing with old image" % (
+            bpy.path.relpath(filename), bpy.path.relpath(new_filename)))
+        return
     os.rename(filename, new_filename)
 
 
@@ -166,6 +174,7 @@ class AngleSection(namedtuple("AngleSection", ["is_diagonal", "num_angles", "x",
 
 
 def render(context, filename):
+    """Renders a frame in blender, outputting with the given filename"""
     bpy.data.scenes['Scene'].render.filepath = "//output/TMP/" + filename
     bpy.ops.render.render(write_still=True)
     return
@@ -192,6 +201,7 @@ def rotate_for_vertical_joint(x, y, modifier=1):
 
 
 def position_cookie_cutter(context, x, y, left, right, enable):
+    """Positions the cookie cutter object."""
     cookie_cutter = bpy.data.objects['CookieCutter']
     if cookie_cutter is None:
         return False
@@ -247,7 +257,14 @@ def reset_rig():
 
 
 def post_render(images_start, total_images, remap, context):
-    
+    """Runs the post render palettization process
+
+    Args:
+        images_start (int): Index of the starting image
+        total_images (int): Total number of images to process
+        remap (int): -1 for mask; 0 for no remap colors; 1, 2, or 3 for remap
+        context (bpy.types.Context): bpy context
+    """
     gmic = "gmic"
     gmic_script_path = get_res_path("remap.gmic")
     
@@ -385,6 +402,7 @@ RenderTaskSection = namedtuple(
 
 
 class RenderTaskSectionWorker(object):
+    """Defines a worker that renders an image in a section on each step."""
     angles = []  # List of Angles
     angle_index = 0  # Curent index into list of Angles
     total_angles = 4  # Total Angles to render
@@ -489,6 +507,7 @@ class RenderTaskSectionWorker(object):
 
 
 class RenderTask(object):
+    """Defines a list of render "sections" to use for rendering."""
     out_index = 0
     sections = []
     section_index = 0

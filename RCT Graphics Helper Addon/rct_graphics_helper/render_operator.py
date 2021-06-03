@@ -21,13 +21,14 @@ preview_collections = {}  # type: dict[bpy.utils.previews.ImagePreviewCollection
 
 
 def removePreviews():
+    """Deletes the preview collect and the previews stored in it"""
     for pcoll in preview_collections.values():
         bpy.utils.previews.remove(pcoll)
     preview_collections.clear()
 
 
 def preview_dir_update(context):
-    """EnumProperty callback"""
+    """Updates the previews in the preview collection"""
     enum_items = []
     directory = get_output_path("preview/")
 
@@ -53,6 +54,7 @@ def preview_dir_update(context):
 
 
 class RCTRender(object):
+    """The base class for rendering RCT objects"""
 
     _timer = None
     rendering = False
@@ -61,18 +63,23 @@ class RCTRender(object):
 
     @classmethod
     def poll(cls, context):
+        """Returns true if the RCT Rig exists"""
         return bpy.data.objects.get('RCT_Rig') is not None
 
     def pre(self, dummy):
+        """Runs when a blender render starts."""
         self.rendering = True
 
     def post(self, dummy):
+        """Runs when a blender render stops"""
         self.rendering = False
 
     def cancel(self, dummy):
+        """Runs when a blender render is cancelled by the user."""
         self.stop = True
 
     def execute(self, context):
+        """Initiates an RCT render."""
         reset_rig()
 
         self.rendering = False
@@ -98,12 +105,13 @@ class RCTRender(object):
         handlers.render_pre.append(self.pre)
         handlers.render_post.append(self.post)
         handlers.render_cancel.append(self.cancel)
-        self._timer = context.window_manager.event_timer_add(0.05, context.window)
+        self._timer = context.window_manager.event_timer_add(0.25, context.window)
         context.window_manager.modal_handler_add(self)
 
         return {"RUNNING_MODAL"}
 
     def modal(self, context, event):
+        """Runs every [x] seconds while rendering to start the next render"""
         if event.type == 'TIMER':
 
             if self.stop or self.renderTask is None or (self.renderTask.status == "FINISHED" and not self.rendering):
@@ -118,6 +126,7 @@ class RCTRender(object):
         return {"PASS_THROUGH"}
 
     def finished(self, context):
+        """Runs when render is finished to reset things and generate parkobj"""
         bpy.app.handlers.render_pre.remove(self.pre)
         bpy.app.handlers.render_post.remove(self.post)
         bpy.app.handlers.render_cancel.remove(self.cancel)

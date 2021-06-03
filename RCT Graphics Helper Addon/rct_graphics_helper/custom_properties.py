@@ -1,7 +1,3 @@
-
-import bpy
-from bpy.types import EnumProperty, Property, bpy_struct
-
 '''
 Copyright (c) 2021 RCT Graphics Helper developers
 
@@ -11,8 +7,12 @@ Interested in contributing? Visit https://github.com/oli414/Blender-RCT-Graphics
 RCT Graphics Helper is licensed under the GNU General Public License version 3.
 '''
 
+import bpy
+from bpy.types import EnumProperty, Property, bpy_struct
+
 
 def create_size_preview():
+    """Generates the meshes and objects to show the size "preview"."""
     scene = bpy.context.scene
     objects = bpy.data.objects
     lamps = bpy.data.lamps
@@ -109,6 +109,7 @@ def create_size_preview():
 
 
 def update_height(self, context):
+    """Updates the height of the size preview."""
     # rct_size_preview = bpy.data.objects.get('RCT_Size_Preview')
     # if rct_size_preview is None:
     rct_size_preview = create_size_preview()
@@ -116,11 +117,15 @@ def update_height(self, context):
 
 
 def update_colors(self, context):
+    """Runs when remap colors are selected to ensure sensible values."""
     properties = self
     properties["hasPrimaryColour"] = (
         properties.hasPrimaryColour or properties.hasSecondaryColour or properties.hasTernaryColour)
     properties["hasSecondaryColour"] = (properties.hasSecondaryColour or properties.hasTernaryColour)
 
+
+# Custom properties to reuse for different object types
+#######################################################
 
 height = bpy.props.IntProperty(
     name="Height",

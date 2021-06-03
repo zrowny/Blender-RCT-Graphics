@@ -1,3 +1,11 @@
+'''
+Copyright (c) 2021 RCT Graphics Helper developers
+
+For a complete list of all authors, please refer to the addon's meta info.
+Interested in contributing? Visit https://github.com/oli414/Blender-RCT-Graphics
+
+RCT Graphics Helper is licensed under the GNU General Public License version 3.
+'''
 
 import bpy
 import math
@@ -11,17 +19,9 @@ from . render_task import *
 from . import custom_properties
 from . json_functions import group_as_dict
 
-'''
-Copyright (c) 2021 RCT Graphics Helper developers
-
-For a complete list of all authors, please refer to the addon's meta info.
-Interested in contributing? Visit https://github.com/oli414/Blender-RCT-Graphics
-
-RCT Graphics Helper is licensed under the GNU General Public License version 3.
-'''
-
 
 def get_render_layers(self, context):
+    """Returns a list of names of the currently defined Render Layers."""
     layers_enum = []
     for key in context.scene.render.layers.keys():
         layers_enum.append((key, key, ""))
@@ -29,6 +29,7 @@ def get_render_layers(self, context):
 
 
 class RenderCustom(RCTRender, bpy.types.Operator):
+    """Operator to render custom defined objects."""
     bl_idname = "render.rct_custom"
     bl_label = "Render RCT Custom"
     
@@ -63,6 +64,7 @@ class RenderCustom(RCTRender, bpy.types.Operator):
 
 
 class CustomProperties(bpy.types.PropertyGroup):
+    """Defines the group of properties for custom defined objects."""
     image_index = bpy.props.IntProperty(
         name="Starting image index",
         description="The first index to use for output images",
@@ -100,6 +102,7 @@ class CustomProperties(bpy.types.PropertyGroup):
 
 
 class CustomPanel(bpy.types.Panel):
+    """Defines the drawing function for the RCT Custom panel"""
     bl_label = "RCT Custom"
     bl_idname = "RENDER_PT_rct_custom"
     bl_space_type = 'PROPERTIES'
@@ -135,13 +138,11 @@ class CustomPanel(bpy.types.Panel):
         
 
 def register_custom_panel():
-    # for cls in classes:
-    #     bpy.utils.register_class(cls)
+    """Registers the custom panel and properties"""
     bpy.types.Scene.rct_graphics_helper_custom_properties = bpy.props.PointerProperty(
         type=CustomProperties)
 
 
 def unregister_custom_panel():
-    # for cls in classes:
-    #     bpy.utils.unregister_class(cls)
+    """Registers the custom panel and properties"""
     del bpy.types.Scene.rct_graphics_helper_custom_properties
