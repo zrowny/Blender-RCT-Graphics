@@ -69,6 +69,11 @@ class RCTCreateRig(bpy.types.Operator):
         rct_camera.rotation_euler = [math.pi/3, 0, -math.pi/4]
         rct_camera.parent = rct_vertical_joint
         scene.camera = rct_camera
+        scene.render.resolution_x = 256
+        scene.render.resolution_y = 256
+        scene.render.resolution_percentage = 100
+        scene.render.alpha_mode = 'TRANSPARENT'
+        scene.render.use_antialiasing = False
 
         light = objects.get('RCT_MainLight')
         # If we don't have a main light, it's probably safe to reset the lights to default. If we do
@@ -192,16 +197,18 @@ class RCTCreateRig(bpy.types.Operator):
                 light.hide = True
         
         create_size_preview()
+        update_object_type(context.scene.rct_graphics_helper_general_properties, context)
 
         return {"FINISHED"}
 
 
 def update_shadows(self, context):
     """Enables/disables the shadow caster depending on the state of the "Cast Shadows" checkbox"""
-    shadow_caster = bpy.data.lamps['RCT_ShadowCaster']
+    shadow_caster = bpy.data.lamps.get('RCT_ShadowCaster', None)
     if shadow_caster is None:
-        return False
-    print(shadow_caster.shadow_method)
+        print("WARNING: Rendering Rig does not exist.")
+        self["cast_shadows"] = True
+        return None
     if self.cast_shadows:
         shadow_caster.shadow_method = "RAY_SHADOW"
         shadow_caster.use_diffuse = True
@@ -371,7 +378,7 @@ class GeneralProperties(bpy.types.PropertyGroup):
             ("footpath_railings", "Footpath Railings",
              "Creates a Footpath Railings object"),
         ],
-        name="Object Type",
+        name="Type",
         description=(
             "Selects the object type to create."),
         default="scenery_small",
@@ -404,7 +411,7 @@ class GeneralProperties(bpy.types.PropertyGroup):
     cast_shadows = bpy.props.BoolProperty(
         name="Cast Shadows",
         description="Controls whether or not the render contains shadows. Should be disabled for vehicles",
-        default=False,
+        default=True,
         update=update_shadows)
 
 
@@ -440,52 +447,65 @@ class GeneralPanel(bpy.types.Panel):
         row.prop(general_properties, "authors")
         row = col.row(align=True)
         row.prop(general_properties, "sourceGame")
-        row = layout.row().split(0.7, align=True)
+        row = layout.row().split(0.6, align=True)
         row.prop(general_properties, "objectType")
         row.prop(general_properties, "version")
-        # Name Strings
-        col = layout.column()
-        head = col.row()
-        head.label("Name:")
-        sub = col.row()
-        subcol = sub.column(align=True)
-        subcol.template_list("StringsEntries_UL_List", "", general_properties, "name_strings",
-                             general_properties, "name_strings_index", rows=3)
-        subcol = sub.column(align=True)
-        subcol.operator("stringentries.actions", icon='ZOOMIN', text="").args = 'ADD,name'
-        subcol.operator("stringentries.actions", icon='ZOOMOUT', text="").args = 'REMOVE,name'
-        subcol.separator()
-        subcol.operator("stringentries.actions", icon='TRIA_UP', text="").args = 'UP,name'
-        subcol.operator("stringentries.actions", icon='TRIA_DOWN', text="").args = 'DOWN,name'
-        # Description Strings
-        col = layout.column()
-        head = col.row()
-        head.label("Description:")
-        sub = col.row()
-        subcol = sub.column(align=True)
-        subcol.template_list("StringsEntries_UL_List", "", general_properties, "description_strings",
-                             general_properties, "description_strings_index", rows=3)
-        subcol = sub.column(align=True)
-        subcol.operator("stringentries.actions", icon='ZOOMIN', text="").args = 'ADD,description'
-        subcol.operator("stringentries.actions", icon='ZOOMOUT', text="").args = 'REMOVE,description'
-        subcol.separator()
-        subcol.operator("stringentries.actions", icon='TRIA_UP', text="").args = 'UP,description'
-        subcol.operator("stringentries.actions", icon='TRIA_DOWN', text="").args = 'DOWN,description'
-        # Capacity Strings
-        col = layout.column()
-        head = col.row()
-        head.label("Capacity:")
-        sub = col.row()
-        subcol = sub.column(align=True)
-        subcol.template_list("StringsEntries_UL_List", "", general_properties, "capacity_strings",
-                             general_properties, "capacity_strings_index", rows=3)
-        subcol = sub.column(align=True)
-        subcol.operator("stringentries.actions", icon='ZOOMIN', text="").args = 'ADD,capacity'
-        subcol.operator("stringentries.actions", icon='ZOOMOUT', text="").args = 'REMOVE,capacity'
-        subcol.separator()
-        subcol.operator("stringentries.actions", icon='TRIA_UP', text="").args = 'UP,capacity'
-        subcol.operator("stringentries.actions", icon='TRIA_DOWN', text="").args = 'DOWN,capacity'
+        
+        box = layout.box()
+
+        row = box.row()
+        row.prop(
+            scene, "rct_strings_expanded",
+            icon="TRIA_DOWN" if scene.rct_strings_expanded else "TRIA_RIGHT",
+            icon_only=True, emboss=False
+        )
+        row.label(text="Strings")
+        if scene.rct_strings_expanded:
+            # Name Strings
+            col = box.column()
+            head = col.row()
+            head.label("Name:")
+            sub = col.row()
+            subcol = sub.column(align=True)
+            subcol.template_list("StringsEntries_UL_List", "", general_properties, "name_strings",
+                                 general_properties, "name_strings_index", rows=3)
+            subcol = sub.column(align=True)
+            subcol.operator("stringentries.actions", icon='ZOOMIN', text="").args = 'ADD,name'
+            subcol.operator("stringentries.actions", icon='ZOOMOUT', text="").args = 'REMOVE,name'
+            subcol.separator()
+            subcol.operator("stringentries.actions", icon='TRIA_UP', text="").args = 'UP,name'
+            subcol.operator("stringentries.actions", icon='TRIA_DOWN', text="").args = 'DOWN,name'
+            # Description Strings
+            col = box.column()
+            head = col.row()
+            head.label("Description:")
+            sub = col.row()
+            subcol = sub.column(align=True)
+            subcol.template_list("StringsEntries_UL_List", "", general_properties, "description_strings",
+                                 general_properties, "description_strings_index", rows=3)
+            subcol = sub.column(align=True)
+            subcol.operator("stringentries.actions", icon='ZOOMIN', text="").args = 'ADD,description'
+            subcol.operator("stringentries.actions", icon='ZOOMOUT', text="").args = 'REMOVE,description'
+            subcol.separator()
+            subcol.operator("stringentries.actions", icon='TRIA_UP', text="").args = 'UP,description'
+            subcol.operator("stringentries.actions", icon='TRIA_DOWN', text="").args = 'DOWN,description'
+            # Capacity Strings
+            col = box.column()
+            head = col.row()
+            head.label("Capacity:")
+            sub = col.row()
+            subcol = sub.column(align=True)
+            subcol.template_list("StringsEntries_UL_List", "", general_properties, "capacity_strings",
+                                 general_properties, "capacity_strings_index", rows=3)
+            subcol = sub.column(align=True)
+            subcol.operator("stringentries.actions", icon='ZOOMIN', text="").args = 'ADD,capacity'
+            subcol.operator("stringentries.actions", icon='ZOOMOUT', text="").args = 'REMOVE,capacity'
+            subcol.separator()
+            subcol.operator("stringentries.actions", icon='TRIA_UP', text="").args = 'UP,capacity'
+            subcol.operator("stringentries.actions", icon='TRIA_DOWN', text="").args = 'DOWN,capacity'
+        
         # Render Settings
+        layout.label("Render Settings:")
         row = layout.row()
         row.prop(general_properties, "dither_threshold")
         row.prop(general_properties, "edge_darkening")
@@ -496,8 +516,10 @@ class GeneralPanel(bpy.types.Panel):
 # Hacky way to have code run on initialization
 ##############################################
 
+
 def collhack(scene):
     """Runs initial code for initialization of this panel"""
+    print("Initializing")
     bpy.app.handlers.scene_update_pre.remove(collhack)
     update_object_type(
         scene.rct_graphics_helper_general_properties, bpy.context)
@@ -508,9 +530,11 @@ def register_general_panel():
     pcoll = render_operator.preview_collections.setdefault("main", bpy.utils.previews.new())
     bpy.types.WindowManager.my_previews = bpy.props.EnumProperty(
         items=enum_previews_from_directory_items)
+    bpy.types.Scene.rct_strings_expanded = bpy.props.BoolProperty(default=False)
     bpy.types.Scene.rct_graphics_helper_general_properties = bpy.props.PointerProperty(
         type=GeneralProperties)
     bpy.app.handlers.scene_update_pre.append(collhack)
+    bpy.app.handlers.load_post.append(collhack)
 
 
 def unregister_general_panel():

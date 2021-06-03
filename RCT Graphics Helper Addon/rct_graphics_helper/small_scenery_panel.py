@@ -76,9 +76,7 @@ def update_shape(self, context):
     shape = properties.shape
     objects = bpy.data.objects
     scene = bpy.context.scene
-    rct_size_preview = bpy.data.objects.get('RCT_Size_Preview')
-    if rct_size_preview is None:
-        custom_properties.update_height(self, context)
+    custom_properties.update_height(self, context)
     if shape != "4/4":
         properties.SMALL_SCENERY_FLAG_VOFFSET_CENTRE = False
         properties.prohibitWalls = False
