@@ -3,44 +3,44 @@
 
 The following programs are necessary:
 
-- ImageMagick (7.0.8-6 or higher)
-- Blender (2.79)
+- [G'MIC CLI](https://gmic.eu/download.html)
+  - On Windows, scroll down to "Command-line interface (CLI)", download and extract that somewhere, and add that to your system's [PATH environmental variable](https://superuser.com/a/284351).
+- [Blender 2.79](https://download.blender.org/release/Blender2.79/#:~:text=blender-2.79b,115536799)
+  - Download one of the 2.79b releases that's appropriate for your system
 
 # Installing
 
-1. Copy the rct_graphics_helper folder (RCT Graphics Helper Addon/rct_graphics_helper) into the Blender addon folder.
-2. Open the sample scene (lighting_rig.blend).
-3. Enable RCT Graphics Helper in Blender's addon menu. 
+1. [Download](https://nightly.link/zrowny/Blender-RCT-Graphics/workflows/main/master/rct-graphics-helper.zip) the rct_graphics_helper Add-on and put it somewhere useful.
+2. [Install and enable](https://docs.blender.org/manual/en/2.79/preferences/addons.html) RCT Graphics Helper in Blender's Add-ons menu. 
 
-The Render tab should now contain 3 new panels.
+The Render tab should now contain new panels (they appear at the bottom by default, but you can drag them to the top if you'd like).
 
 # Usage
 
-1. Use the sample scene from the lighting_rig.blend file.
-2. Import or create your model centered on the world's origin.
-3. Go into to render tab.
+1. In a new or existing file, go to the `RCT General` panel and click `Set Up Rendering Rig`.
+3. In the `General` panel and the panel for the object type, configure the properties you want for this object. Each property will have a tooltip when you hover over it that will have more information
+  - In the future, you will be able to import an existing object JSON file and the properties will be loaded from that.
+4. Create your object, give it materials, etc.
+5. Make sure to save your .blend file (preferable in its own folder)!
+6. Click `Render [TYPE] Object`. Once it's done rendering, the results will be in the output folder next to the .blend file.
 
-Please check the [guidelines](https://github.com/oli414/Blender-RCT-Graphics/wiki/Guidelines) for the best results.
+Please check the [guidelines](https://github.com/zrowny/Blender-RCT-Graphics/wiki/Guidelines) for the best results.
 
-## Static Objects and Rides
+## Object Types
 
-4. Set the number of viewing angles in the "RCT Static" panel, for a standard scenery object this would be 4.
-5. Click Render Static Object and wait until a message appears stating that the render is finished.
-
-## Tracked Ride Vehicles
-
-4. Select for which track pieces you want to render sprites in the "RCT Vehicles" panel.
-5. Check the Restraint Animation checkbox if your vehicle has a restraint animation (Not yet implemented).
-6. Check the Inverted Set checkbox for rides which can go upside-down for an extended amount of time, like the flying and lay-down coaster.
-7. Set the number of rider sets (Sets of peeps, peeps usually enter rides in sets of 2). The different sets of peeps should have their layers set to a unique one after the first. So for the first set of peeps set their layers to only have the seconds one enabled.
-8. Click Render Vehicle and wait until a message appears stating that the render is finished.
+Initially, the only OpenRCT2 object type that is properly supported is small scenery, but the `Custom` object type allows you to specify the rendering settings to use manually, so you can accomplish other results.
 
 ## Output
 
-The images will be outputted to (by default) the output folder which is relative to the blender file. Offset files will be created along with the images.
-The output can then be used in a tool like [Krutonium's ObjectBuilderGUI](https://github.com/Krutonium/ObjectBuilderGUI).
+After rendering, the output folder will contain a `[objectId].parkobj` file that (if everything is finalized) can be used immediately with OpenRCT2. It is a zip archive of the `object.json` file and the `images` folder.
 
-# Notes
+The `images` folder contain the final images that are included in the `.parkobj` file. They store _only_ the palette indices, and not the palette itself, so they appear as weird and greyscale. (Note that only the New Save Format (NSF) branch of OpenRCT2 currently supports these palette-index images. Until this functionality is added to the main development branch, you can replace them with the images in the `preview` folder if you aren't using the NSF branch).
+
+The `preview` folder contains final rendered images that are colored with the RCT2 palette so that they appear as they would inside the game.
+
+The `object.json` file is the JSON file that describes the created object. See the [OpenGraphics wiki](https://github.com/OpenRCT2/OpenGraphics/wiki/OpenRCT2-JSON-Objects) for more information about the JSON format.
+
+# Links
 
 * The textures distributed with the sample models are licensed under public domain and were taken from: https://opengameart.org/
 * [OpenGraphics](https://github.com/OpenRCT2/OpenGraphics) A project to create free replacements for the graphics in open source re-implementation of RollerCoaster Tycoon 2.
