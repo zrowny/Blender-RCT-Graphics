@@ -18,9 +18,9 @@ json_data = {}
 
 
 def add_general_properties_json(context):
+    print("Adding general properties")
     general_properties = context.scene.rct_graphics_helper_general_properties
     general_properties_dict = group_as_dict(general_properties)
-    print(general_properties_dict)
     general_properties_dict.pop("name_strings_index", None)
     general_properties_dict.pop("description_strings_index", None)
     general_properties_dict.pop("capacity_strings_index", None)
@@ -85,9 +85,9 @@ def JsonImage(path="", x=0, y=0, format="", keepPalette=True):
     return image
 
 
-def make_parkobj():
+def make_parkobj(context):
     print("Making parkobj file")
-    name = "test"
+    name = context.scene.rct_graphics_helper_general_properties.id
     write_json_file()
     with zipfile.ZipFile(get_output_path("%s.parkobj" % name), 'w') as parkobj:
         json_file_path = get_output_path("object.json")
@@ -107,7 +107,7 @@ def group_as_dict(group, includeFalse=False):
     prop_dict = {}
     props = group.bl_rna.properties
 
-    for key in group.keys():
+    for key in props.keys():
         
         # Avoid properties we don't want
         if key in EXCLUDE:

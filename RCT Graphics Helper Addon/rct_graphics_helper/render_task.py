@@ -252,6 +252,7 @@ def post_render(images_start, total_images, remap, context):
     gmic_script_path = get_res_path("remap.gmic")
     
     no_remap_palette_path = get_res_path("noremap1.png")
+    full_palette_path = get_res_path("full.png")
     preview_path = get_output_path("preview/")
     images_path = get_output_path("images/")
     if not os.path.exists(preview_path):
@@ -326,7 +327,6 @@ def post_render(images_start, total_images, remap, context):
                     'IndexAllRemap[^0]', '[0],%s,%s,%s' % (dither_threshold, edge_darkening, blur_amount),
                     '-OutputOffset[^0]', '%s,%s' % (images_start, get_output_path('TMP/remap3/Indexed'))])
 
-        full_palette_path = get_res_path("full.png")
         for animation_frame in range(images_start, total_images + images_start):
             indexed_paths = [get_output_path("TMP/noremap/Indexed%s.png" % animation_frame)]
             indexed_paths.append(get_output_path("TMP/remap1/Indexed%s.png" % animation_frame))
@@ -348,9 +348,9 @@ def post_render(images_start, total_images, remap, context):
             frame = str(animation_frame).zfill(6)
             image_path = get_output_path("TMP/" + frame + ".png")
             process = subprocess.run([
-                gmic, '-verbose', '0', no_remap_palette_path, image_path, gmic_script_path,
-                'IndexAllNoRemap[^0]', '[0],{},{},{}'.format(dither_threshold, edge_darkening, blur_amount),
-                'Compose[1]', '[0]', '-o[1]', get_output_path('images/%s.png' % animation_frame), '-o[2]',
+                gmic, '-verbose', '0', full_palette_path, no_remap_palette_path, image_path, gmic_script_path,
+                'IndexAllNoRemap[2]', '[1],{},{},{}'.format(dither_threshold, edge_darkening, blur_amount),
+                'Compose[2]', '[0]', '-o[2]', get_output_path('images/%s.png' % animation_frame), '-o[3]',
                 get_output_path('preview/%s.png' % animation_frame)], stdout=subprocess.PIPE)
             
             a = process.stdout.decode('utf-8')[:-1]
@@ -371,6 +371,7 @@ def post_render(images_start, total_images, remap, context):
     json_images = []
     for i in range(total_images):
         path = "images/%s.png" % (i + images_start)
+        print("Position %s: %s" % (i, positions[i]))
         x, y = positions[i].split(',')
         json_images.append(JsonImage(path, x, y))
 
@@ -430,6 +431,7 @@ class RenderTaskSectionWorker(object):
         self.x_index = 0
         self.y_index = 0
         self.has_sub_tiles = self.total_x > 1 or self.total_y > 1
+        config_compositor_nodes(self.render_layer)
 
     def step(self):
         if self.angle_index == self.total_angles:

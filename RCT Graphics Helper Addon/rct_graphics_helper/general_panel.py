@@ -14,18 +14,18 @@ import math
 import os
 from . small_scenery_panel import update_small_scenery
 from . render_task import get_res_path, get_output_path
-
-preview_collections = {}  # type: dict[bpy.utils.previews.ImagePreviewCollection]
+from . import render_operator as render_operator
+from . custom_properties import create_size_preview
 
 
 def enum_previews_from_directory_items(self, context):
-    pcoll = preview_collections.get("main")  # type: bpy.utils.previews.ImagePreviewCollection
+    pcoll = render_operator.preview_collections.get("main")  # type: bpy.utils.previews.ImagePreviewCollection
 
     if not pcoll:
         directory = get_output_path("preview/")
         enum_items = []
         if os.path.exists(directory):
-            enum_items = preview_dir_update(context)
+            enum_items = render_operator.preview_dir_update(context)
         if not enum_items:
             default_image = get_res_path("preview.png")
             thumb = pcoll.load("defaultpreviewimage", default_image, 'IMAGE')
@@ -37,41 +37,9 @@ def enum_previews_from_directory_items(self, context):
     return pcoll.my_previews
 
 
-def preview_dir_update(context):
-    """EnumProperty callback"""
-    enum_items = []
-    directory = get_output_path("preview/")
-
-    # Get the preview collection (defined in register func).
-    removePreviews()
-    pcoll = preview_collections.setdefault("main", bpy.utils.previews.new())
-
-    if os.path.exists(directory):
-        # Scan the directory for png files
-        image_paths = []
-        for fn in os.listdir(directory):
-            if fn.lower().endswith(".png"):
-                image_paths.append(fn)
-
-        for i, name in enumerate(image_paths):
-            # generates a thumbnail preview for a file.
-            filepath = os.path.join(directory, name)
-            thumb = pcoll.load(filepath, filepath, 'IMAGE')
-            enum_items.append((name, name, "", thumb.icon_id, i))
-
-    pcoll.my_previews = enum_items
-    return pcoll.my_previews
-
-
-def removePreviews():
-    for pcoll in preview_collections.values():
-        bpy.utils.previews.remove(pcoll)
-    preview_collections.clear()
-
-
 class RCTCreateRig(bpy.types.Operator):
     bl_idname = "render.rct_create_rig"
-    bl_label = "Create Rending Rig"
+    bl_label = "Create Rendering Rig"
 
     def execute(self, context):
         scene = bpy.context.scene
@@ -220,6 +188,8 @@ class RCTCreateRig(bpy.types.Operator):
                 constraint.track_axis = "TRACK_NEGATIVE_Z"
                 light.parent = rct_vertical_joint
                 light.hide = True
+        
+        create_size_preview()
 
         return {"FINISHED"}
 
@@ -342,7 +312,8 @@ class GeneralProperties(bpy.types.PropertyGroup):
     id = bpy.props.StringProperty(
         name="OpenRCT2 ID",
         description="OpenRCT2 id of the object. This should be formatted as objectsource.objecttype.objectname."
-        "This value MUST be universally unique."
+        "This value MUST be universally unique.",
+        default="my.scenery_small.object"
     )
     authors = bpy.props.StringProperty(
         name="Authors",
@@ -440,7 +411,7 @@ class GeneralPanel(bpy.types.Panel):
         row = layout.row()
         col = row.column()
         col.label("Preview")
-        col.template_icon_view(wm, "my_previews")
+        col.template_icon_view(wm, "my_previews", show_labels=True, scale=3.0)
         col.prop(wm, "my_previews", text="")
         row = layout.row()
         row.operator("render.rct_create_rig", text="Set Up Rendering Rig")
@@ -515,7 +486,7 @@ def collhack(scene):
 
 
 def register_general_panel():
-    pcoll = preview_collections.setdefault("main", bpy.utils.previews.new())
+    pcoll = render_operator.preview_collections.setdefault("main", bpy.utils.previews.new())
     bpy.types.WindowManager.my_previews = bpy.props.EnumProperty(
         items=enum_previews_from_directory_items)
     bpy.types.Scene.rct_graphics_helper_general_properties = bpy.props.PointerProperty(
@@ -524,6 +495,6 @@ def register_general_panel():
 
 
 def unregister_general_panel():
-    removePreviews()
+    render_operator.removePreviews()
     del bpy.types.WindowManager.my_previews
     del bpy.types.Scene.rct_graphics_helper_general_properties

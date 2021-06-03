@@ -6,10 +6,10 @@ import os
 from bpy.props import CollectionProperty, IntProperty
 from bpy.types import UILayout
 
-from . render_operator import *
+from . render_operator import RCTRender
 from . render_task import *
-from . import custom_properties
-from . import json_functions
+from . import custom_properties as custom_properties
+from . import json_functions as json_functions
 
 '''
 Copyright (c) 2021 RCT Graphics Helper developers
@@ -216,11 +216,11 @@ class FrameOffsets_UL_List(bpy.types.UIList):
 
 
 def add_small_scenery_properties_json(context):
-    json_properties = group_as_dict(context.scene.rct_graphics_helper_small_scenery_properties)
+    json_properties = json_functions.group_as_dict(context.scene.rct_graphics_helper_small_scenery_properties)
     json_properties.pop("frameOffsets_index", None)
-    if json_properties["hasGlass"]:
+    if json_properties.get("hasGlass", None):
         json_properties.pop("isAnimated", None)
-    if not json_properties["isAnimated"]:
+    if not json_properties.get("isAnimated", None):
         json_properties.pop("SMALL_SCENERY_FLAG_VISIBLE_WHEN_ZOOMED", None)
         json_properties.pop("SMALL_SCENERY_FLAG17", None)
         json_properties.pop("hasOverlayImage", None)
@@ -229,7 +229,7 @@ def add_small_scenery_properties_json(context):
         json_properties.pop("animation_type", None)
         json_properties.pop("animationMask", None)
         json_properties.pop("frameOffsets", None)
-    elif json_properties["animation_type"] != "use_frame_offsets":
+    elif json_properties.get("animation_type", None) != "use_frame_offsets":
         json_properties.pop("SMALL_SCENERY_FLAG17", None)
         json_properties.pop("SMALL_SCENERY_FLAG_VISIBLE_WHEN_ZOOMED", None)
         json_properties["hasOverlayImage"] = True
@@ -237,17 +237,17 @@ def add_small_scenery_properties_json(context):
         json_properties.pop("animation_type", None)
     else:
         frame_offsets = []
-        raw_frame_offsets = json_properties["frameOffsets"]
+        raw_frame_offsets = json_properties.get("frameOffsets", None)
         if raw_frame_offsets is not None:
             for raw_frame_offset in raw_frame_offsets:
-                frame_offsets.append(raw_frame_offset["value"])
+                frame_offsets.append(raw_frame_offset.get("value", 0))
         json_properties["frameOffsets"] = frame_offsets
-    if json_properties["shape"] != "4/4":
+    if json_properties.get("shape", None) != "4/4":
         json_properties.pop("SMALL_SCENERY_FLAG_VOFFSET_CENTRE", None)
         json_properties.pop("prohibitWalls", None)
-    if json_properties["shape"] != "1/4":
+    if json_properties.get("shape", None) != "1/4":
         json_properties.pop("SMALL_SCENERY_FLAG27", None)
-    if json_properties["sceneryGroup"] == "":
+    if json_properties.get("sceneryGroup", None) == "":
         json_properties.pop("sceneryGroup", None)
     json_functions.json_data["properties"] = json_properties
 

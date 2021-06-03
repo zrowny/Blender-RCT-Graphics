@@ -140,7 +140,7 @@ Mask : -skip ${1=55}
     -repeat {$!} local[$>]
         [-1]
         -autocrop[-2]
-        -echo_stdout ", \"x\": "{{-1,xM}-{-2,xM}-128}," \"y\": "{{-1,yM}-{-2,yM}-128}
+        -echo_stdout {{-1,xM}-{-2,xM}-128}","{{-1,yM}-{-2,yM}-128}
         -remove[-1]
         -autocrop[-1]
     -endlocal done
