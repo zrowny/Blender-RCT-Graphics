@@ -256,7 +256,7 @@ def reset_rig():
     rotate_rig((0, 0, 0, 0))
 
 
-def post_render(images_start, total_images, remap, context):
+def post_render(images_start, total_images, remap, context, offset=(0, 0)):
     """Runs the post render palettization process
 
     Args:
@@ -385,12 +385,12 @@ def post_render(images_start, total_images, remap, context):
         a = process.stdout.decode('utf-8')[:-1]
         positions.extend(a.split('\n'))
     
-    json_images = []
+    json_images = json_functions.json_data.get("images", [])
     for i in range(total_images):
         path = "images/%s.png" % (i + images_start)
-        print("Position %s: %s" % (i, positions[i]))
+        # print("Position %s: %s" % (i + images_start, positions[i]))
         x, y = positions[i].split(',')
-        json_images.append(JsonImage(path, x, y))
+        json_images.append(JsonImage(path, int(x) + offset[0], int(y) + offset[1]))
 
     # print(json_images)
     json_functions.json_data["images"] = json_images
@@ -398,11 +398,14 @@ def post_render(images_start, total_images, remap, context):
 
 
 RenderTaskSection = namedtuple(
-    'RenderTaskSection', 'angles remap render_layer scene_layers animation_index animation_count x_tiles y_tiles')
+    'RenderTaskSection',
+    'angles remap render_layer scene_layers animation_index animation_count x_tiles y_tiles blank offset')
 
 
 class RenderTaskSectionWorker(object):
     """Defines a worker that renders an image in a section on each step."""
+    blank = False  # If true, just add a blank image instead of rendering
+    
     angles = []  # List of Angles
     angle_index = 0  # Curent index into list of Angles
     total_angles = 4  # Total Angles to render
@@ -424,34 +427,45 @@ class RenderTaskSectionWorker(object):
     context = None  # type: bpy.context
     render_layer = ""
     remap = 0
+    offset = (0, 0)
 
     scene_layers = []
     has_sub_tiles = False
 
     def __init__(self, section_in: RenderTaskSection, out_index_start, context):
-        self.angles = section_in.angles
-        self.remap = section_in.remap
-        self.render_layer = section_in.render_layer
-        self.scene_layers = section_in.scene_layers
-        self.anim_start = section_in.animation_index
-        self.total_anim = section_in.animation_count
-        self.total_x = section_in.x_tiles
-        self.total_y = section_in.y_tiles
+        self.blank = section_in.blank
         self.images_start = out_index_start
-        self.frame = None
         self.image_index = self.images_start
-        self.angle_index = 0
-        self.total_angles = len(self.angles)
-        self.anim_index = self.anim_start
-        self.total_images = self.total_angles * self.total_anim * self.total_x * self.total_y
-        self.status = "CREATED"
-        self.context = context
-        self.x_index = 0
-        self.y_index = 0
-        self.has_sub_tiles = self.total_x > 1 or self.total_y > 1
-        config_compositor_nodes(self.render_layer)
+        if not self.blank:
+            self.angles = section_in.angles
+            self.remap = section_in.remap
+            self.render_layer = section_in.render_layer
+            self.scene_layers = section_in.scene_layers
+            self.anim_start = section_in.animation_index
+            self.total_anim = section_in.animation_count
+            self.total_x = section_in.x_tiles
+            self.total_y = section_in.y_tiles
+            self.offset = section_in.offset
+            self.frame = None
+            self.angle_index = 0
+            self.total_angles = len(self.angles)
+            self.anim_index = self.anim_start
+            self.total_images = self.total_angles * self.total_anim * self.total_x * self.total_y
+            self.status = "CREATED"
+            self.context = context
+            self.x_index = 0
+            self.y_index = 0
+            self.has_sub_tiles = self.total_x > 1 or self.total_y > 1
+            config_compositor_nodes(self.render_layer)
 
     def step(self):
+        if self.blank:
+            json_images = json_functions.json_data.get("images", [])
+            json_images.append("")
+            json_functions.json_data["images"] = json_images
+            self.image_index += 1
+            self.status = "FINISHED"
+            return "FINISHED"
         if self.angle_index == self.total_angles:
             self.angle_index = 0
             self.anim_index += 1
@@ -499,7 +513,7 @@ class RenderTaskSectionWorker(object):
         self.image_index += 1
         if self.image_index >= self.total_images + self.images_start:
             # print("Finished: %s out of %s total" % (self.image_index, self.total_images))
-            post_render(self.images_start, self.total_images, self.remap, self.context)
+            post_render(self.images_start, self.total_images, self.remap, self.context, self.offset)
             self.status = "FINISHED"
             return "FINISHED"
         self.status = "RUNNING"
@@ -532,13 +546,13 @@ class RenderTask(object):
         self.use_antialiasing = context.scene.render.use_antialiasing
 
     def add(self, angles=[Angle(0, 0, 0, 0)], remap=0, render_layer="", scene_layers=[0, 10],
-            animation_frame_index=0, animation_frame_count=1, x_tiles=1, y_tiles=1):
+            animation_frame_index=0, animation_frame_count=1, x_tiles=1, y_tiles=1, blank=False, offset=(0, 0)):
         """Adds a render task section
 
         Args:
             angles (list[Angle], optional): list of Angles for this section
             remap (int, optional): If >0, the number of remappable colors. If 0, a normal image
-            with no remappable colors. If -1, renders a flat mask. Defaults to 0.
+                with no remappable colors. If -1, renders a flat mask. Defaults to 0.
             render_layer (str, optional): Name of the render layer to use. Defaults to "".
             scene_layers (list[int], optional): List of the scene layers to have enabled for this
                 section. Defaults to [0, 10].
@@ -547,12 +561,14 @@ class RenderTask(object):
             x_tiles (int, optional): (for large scenery) The number of tiles in the x direction
                 to render. Defaults to 1.
             y_tiles (int, optional): (for large scenery) The number of tiles in the y direction
-            to render. Defaults to 1.
+                to render. Defaults to 1.
+            blank (boolean, optional): If set, all other options are ignored and a blank image is
+                added instead.
         """
         
         self.sections.append(
             RenderTaskSection(angles, remap, render_layer, scene_layers,
-                              animation_frame_index, animation_frame_count, x_tiles, y_tiles))
+                              animation_frame_index, animation_frame_count, x_tiles, y_tiles, blank, offset))
 
     def step(self):
         if self.section_task is None:

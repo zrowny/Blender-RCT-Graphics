@@ -8,7 +8,8 @@ RCT Graphics Helper is licensed under the GNU General Public License version 3.
 '''
 
 import bpy
-from bpy.types import EnumProperty, Property, bpy_struct
+from bpy.types import Action, EnumProperty, Property, bpy_struct
+from . json_functions import group_as_dict
 
 
 def create_size_preview():
@@ -22,11 +23,12 @@ def create_size_preview():
         scene.objects.link(rct_size_preview)
     rct_size_preview.hide = True
     rct_size_preview.hide_select = True
+    rct_size_preview.layers = [i == 10 for i in range(20)]
 
     rct_box_mesh = bpy.data.meshes.get("RCT_preview_cube")
     if rct_box_mesh is None:
-        vertices = [(-0.5, -0.5, -0.5), (-0.5, -0.5, 0.5), (-0.5, 0.5, -0.5), (-0.5, 0.5, 0.5),
-                    (0.5, -0.5, -0.5), (0.5, -0.5, 0.5), (0.5, 0.5, -0.5), (0.5, 0.5, 0.5)]
+        vertices = [(-0.5, -0.5, 0.0), (-0.5, -0.5, 1.0), (-0.5, 0.5, 0.0), (-0.5, 0.5, 1.0),
+                    (0.5, -0.5, 0.0), (0.5, -0.5, 1.0), (0.5, 0.5, 0.0), (0.5, 0.5, 1.0)]
         edges = [(0, 1), (1, 3), (3, 2), (2, 0), (4, 5), (5, 7), (7, 6), (6, 4), (0, 4), (1, 5), (2, 6), (3, 7)]
         rct_box_mesh = bpy.data.meshes.new("RCT_preview_cube")
         rct_box_mesh.from_pydata(vertices, edges, [])
@@ -36,61 +38,56 @@ def create_size_preview():
         rct_box = objects.new("RCT_Full_Tile", rct_box_mesh)
         scene.objects.link(rct_box)
     rct_box.hide_select = True
-    rct_box.empty_draw_size = 0.50
-    rct_box.empty_draw_type = 'CUBE'
     rct_box.scale = (1.0, 1.0, 0.025516)
-    rct_box.location = (0, 0, 0.012758)
+    rct_box.location = (0, 0, 0)
     rct_box.parent = rct_size_preview
+    rct_box.layers = [i == 10 for i in range(20)]
 
     rct_box = objects.get("RCT_Half_Tile")
     if rct_box is None:
         rct_box = objects.new("RCT_Half_Tile", rct_box_mesh)
         scene.objects.link(rct_box)
     rct_box.hide_select = True
-    rct_box.empty_draw_size = 0.50
-    rct_box.empty_draw_type = 'CUBE'
     rct_box.scale = (0.5, 1, 0.025516)
-    rct_box.location = (0.25, 0, 0.012758)
+    rct_box.location = (0.25, 0, 0)
     rct_box.parent = rct_size_preview
+    rct_box.layers = [i == 10 for i in range(20)]
 
     rct_box = objects.get("RCT_One_Quarter")
     if rct_box is None:
         rct_box = objects.new("RCT_One_Quarter", rct_box_mesh)
         scene.objects.link(rct_box)
     rct_box.hide_select = True
-    rct_box.empty_draw_size = 0.50
-    rct_box.empty_draw_type = 'CUBE'
     rct_box.scale = (0.5, 0.5, 0.025516)
-    rct_box.location = (0, 0, 0.012758)
+    rct_box.location = (0, 0, 0)
     rct_box.parent = rct_size_preview
+    rct_box.layers = [i == 10 for i in range(20)]
 
     rct_box = objects.get("RCT_Diagonal_1")
     if rct_box is None:
         rct_box = objects.new("RCT_Diagonal_1", rct_box_mesh)
         scene.objects.link(rct_box)
     rct_box.hide_select = True
-    rct_box.empty_draw_size = 0.50
-    rct_box.empty_draw_type = 'CUBE'
     rct_box.scale = (0.5, 0.5, 0.025516)
-    rct_box.location = (-0.25, 0.25, 0.012758)
+    rct_box.location = (-0.25, 0.25, 0.)
     rct_box.parent = rct_size_preview
+    rct_box.layers = [i == 10 for i in range(20)]
 
     rct_box = objects.get("RCT_Diagonal_2")
     if rct_box is None:
         rct_box = objects.new("RCT_Diagonal_2", rct_box_mesh)
         scene.objects.link(rct_box)
     rct_box.hide_select = True
-    rct_box.empty_draw_size = 0.50
-    rct_box.empty_draw_type = 'CUBE'
     rct_box.scale = (0.5, 0.5, 0.025516)
-    rct_box.location = (0.25, -0.25, 0.012758)
+    rct_box.location = (0.25, -0.25, 0)
     rct_box.parent = rct_size_preview
+    rct_box.layers = [i == 10 for i in range(20)]
 
     rct_box = objects.get("RCT_Three_Quarter")
     if rct_box is None:
-        vertices = [(0.0, 0.0, -0.5), (0.0, 0.0, 0.5), (0.5, 0.5, -0.5), (0.5, 0.5, 0.5),
-                    (0.0, -0.5, -0.5), (0.0, -0.5, 0.5), (0.5, -0.5, -0.5), (0.5, -0.5, 0.5),
-                    (-0.5, 0.0, -0.5), (-0.5, 0.0, 0.5), (-0.5, 0.5, -0.5), (-0.5, 0.5, 0.5)]
+        vertices = [(0.0, 0.0, 0.0), (0.0, 0.0, 1.0), (0.5, 0.5, 0.0), (0.5, 0.5, 1.0),
+                    (0.0, -0.5, 0.0), (0.0, -0.5, 1.0), (0.5, -0.5, 0.0), (0.5, -0.5, 1.0),
+                    (-0.5, 0.0, 0.0), (-0.5, 0.0, 1.0), (-0.5, 0.5, 0.0), (-0.5, 0.5, 1.0)]
         edges = [(0, 1), (3, 2), (4, 5), (6, 7), (5, 7), (3, 7), (1, 5), (8, 9), (9, 11), (11, 10),
                  (3, 11), (1, 9), (2, 10), (8, 10), (0, 8), (2, 6), (0, 4), (4, 6)]
         rct_box_mesh = bpy.data.meshes.new("RCT_preview_three_quarters")
@@ -99,11 +96,11 @@ def create_size_preview():
         rct_box = objects.new("RCT_Three_Quarter", rct_box_mesh)
         scene.objects.link(rct_box)
     rct_box.hide_select = True
-    rct_box.empty_draw_size = 0.50
-    rct_box.empty_draw_type = 'CUBE'
     rct_box.scale = (1, 1, 0.025516)
-    rct_box.location = (0, 0, 0.012758)
+    rct_box.location = (0, 0, 0)
     rct_box.parent = rct_size_preview
+    rct_box.layers = [i == 10 for i in range(20)]
+    scene.layers = [scene.layers[i] or i == 10 for i in range(20)]
 
     return rct_size_preview
 
@@ -200,3 +197,148 @@ cursor = bpy.props.EnumProperty(
         ("CURSOR_HAND_CLOSED", "HAND CLOSED", ""),
         ("CURSOR_ARROW", "ARROW", ""),
     ])
+
+colour_list = [
+    ("black", "Black", ""),
+    ("grey", "Grey", ""),
+    ("white", "White", ""),
+    ("dark_purple", "Dark Purple", ""),
+    ("light_purple", "Light Purple", ""),
+    ("bright_purple", "Bright Purple", ""),
+    ("dark_blue", "Dark Blue", ""),
+    ("light_blue", "Light Blue", ""),
+    ("icy_blue", "Icy Blue", ""),
+    ("teal", "Teal", ""),
+    ("aquamarine", "Aquamarine", ""),
+    ("saturated_green", "Saturated Green", ""),
+    ("dark_green", "Dark Green", ""),
+    ("moss_green", "Moss Green", ""),
+    ("bright_green", "Bright Green", ""),
+    ("olive_green", "Olive Green", ""),
+    ("dark_olive_green", "Dark Olive Green", ""),
+    ("bright_yellow", "Bright Yellow", ""),
+    ("yellow", "Yellow", ""),
+    ("dark_yellow", "Dark Yellow", ""),
+    ("light_orange", "Light Orange", ""),
+    ("dark_orange", "Dark Orange", ""),
+    ("light_brown", "Light Brown", ""),
+    ("saturated_brown", "Saturated Brown", ""),
+    ("dark_brown", "Dark Brown", ""),
+    ("salmon_pink", "Salmon Pink", ""),
+    ("bordeaux_red", "Bordeaux Red", ""),
+    ("saturated_red", "Saturated Red", ""),
+    ("bright_red", "Bright Red", ""),
+    ("dark_pink", "Dark Pink", ""),
+    ("bright_pink", "Bright Pink", ""),
+    ("light_pink", "Light Pink", "")
+]
+
+colour = bpy.props.EnumProperty(
+    colour_list,
+    name="Color",
+    description="Color",
+    default="black"
+)
+
+
+# Car Colours
+##############
+
+class CarColours_OT_actions(bpy.types.Operator):
+    """Buttons to add/remove/move a car colour item."""
+    bl_idname = "carcolours.actions"
+    bl_label = "List Actions"
+    bl_description = "Add/Remove\n\nMove Up/Down"
+    bl_options = {'REGISTER'}
+
+    action = bpy.props.StringProperty(name="Action", description="")
+
+    def invoke(self, context: bpy.types.Context, event):
+        scene = context.scene
+        index = getattr(scene, "car_colours_index")
+        carColours = getattr(scene, "carColours")
+
+        try:
+            item = carColours[index]
+        except IndexError:
+            pass
+        else:
+            if self.action == 'DOWN' and index < len(carColours) - 1:
+                carColours.move(index, index+1)
+                setattr(scene, "car_colours_index", index + 1)
+
+            elif self.action == 'UP' and index >= 1:
+                carColours.move(index, index-1)
+                setattr(scene, "car_colours_index", index + 1)
+
+            elif self.action == 'REMOVE':
+                if index != 0:
+                    setattr(scene, "car_colours_index", index + 1)
+                carColours.remove(index)
+
+        if self.action == 'ADD':
+            item = carColours.add()
+            setattr(scene, "car_colours_index", len(carColours)-1)
+
+        return {"FINISHED"}
+
+
+class CarColours_UL_List(bpy.types.UIList):
+    """Defines the drawing function for each car colour item"""
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        if self.layout_type in {'DEFAULT', 'COMPACT'}:
+            row = layout.row(align=True)
+            row.prop(item, "colour1", text="")
+            row.prop(item, "colour2", text="")
+            row.prop(item, "colour3", text="")
+        elif self.layout_type in {'GRID'}:
+            layout.alignment = 'CENTER'
+            layout.label(text="colourEntry")
+
+
+class CarColourItem(bpy.types.PropertyGroup):
+    """Defines one entry in carColours"""
+    colour1 = bpy.props.EnumProperty(
+        items=colour_list,
+        name="Primary Color",
+        description="Primary Color",
+        default="black"
+    )
+    colour2 = bpy.props.EnumProperty(
+        items=colour_list,
+        name="Secondary Color",
+        description="Secondary Color",
+        default="black"
+    )
+    colour3 = bpy.props.EnumProperty(
+        items=colour_list,
+        name="Tertiary Color",
+        description="Tertiary Color",
+        default="black"
+    )
+
+
+def process_car_colours(context):
+    car_colours = []
+    raw_car_colours = [group_as_dict(i) for i in context.scene.carColours]  # type: list[CarColourItem]
+    for entry in raw_car_colours:
+        if context.scene.car_colours_single_preset:
+            car_colours.append([[entry['colour1'], entry['colour2'], entry['colour3']]])
+        else:
+            car_colours.append([entry['colour1'], entry['colour2'], entry['colour3']])
+    return car_colours
+
+
+carColours = bpy.props.CollectionProperty(
+    type=CarColourItem, name="Preset Colors",
+    description="A list of color schemes to use as preset(s) for this object when building a new ride.")
+car_colours_index = bpy.props.IntProperty(default=0)
+car_colours_single_preset = bpy.props.BoolProperty(
+    name="Single Preset",
+    description="If true, this list of color schemes is always used for new rides, and each entry is for the next "
+    "car/vehicle on the ride. If false, OpenRCT2 will randomly choose *one* of these color schemes when building a "
+    "new ride, and apply it to all vehicles.\n\nIn other words, a ride can either have multiple presets with a "
+    "single color scheme each (which are randomly chosen from when a ride is built), or it can have a single preset "
+    "that has different color schemes for each car/train",
+    default=False
+)
