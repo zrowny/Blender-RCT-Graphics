@@ -97,6 +97,7 @@ class RCTRender(object):
         context.scene.render.alpha_mode = 'TRANSPARENT'
         
         json_functions.add_general_properties_json(context)
+        json_functions.json_data.pop("images", None)
         
         handlers = bpy.app.handlers
         handlers.render_pre.clear()

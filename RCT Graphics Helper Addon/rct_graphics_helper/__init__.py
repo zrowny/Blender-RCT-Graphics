@@ -37,6 +37,7 @@ from . general_panel import register_general_panel, unregister_general_panel
 from . custom_panel import register_custom_panel, unregister_custom_panel
 from . small_scenery_panel import register_small_scenery_panel, unregister_small_scenery_panel
 from . vehicles_panel import register_vehicles_panel, unregister_vehicles_panel
+from . stall_panel import register_stall_panel, unregister_stall_panel
 
 import traceback
 
@@ -52,6 +53,7 @@ def register():
     register_custom_panel()
     register_small_scenery_panel()
     register_vehicles_panel()
+    register_stall_panel()
 
     print("Registered {} with {} modules".format(bl_info["name"], len(modules)))
 

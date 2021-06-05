@@ -30,6 +30,12 @@ def add_general_properties_json(context):
     general_properties_dict.pop("edge_darkening", None)
     general_properties_dict.pop("dither_threshold", None)
     general_properties_dict.pop("cast_shadows", None)
+    objectType = general_properties_dict.get("objectType", None)
+    if objectType in ("stall", "flat_ride", "vehicle"):
+        general_properties_dict["objectType"] = "ride"
+    originalId = general_properties_dict.pop("originalId", "")
+    if originalId != "":
+        general_properties_dict["originalId"] = originalId
     strings = {}
     name_strings = general_properties_dict.pop("name_strings", None)
     if name_strings is not None:
@@ -112,13 +118,13 @@ def JsonImage(path="", x=0, y=0, format="", keepPalette=True):
     """
     image = {
         "path": path,
-        "x": x,
-        "y": y,
+        "x": int(x),
+        "y": int(y),
     }
     if format != "":
         image["format"] = format
     if keepPalette:
-        image["keepPalette"] = True
+        image["palette"] = "keep"
     return image
 
 

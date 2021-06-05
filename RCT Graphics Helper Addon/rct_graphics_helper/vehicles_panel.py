@@ -190,7 +190,7 @@ class VehiclesPanel(bpy.types.Panel):
     def poll(cls, context: bpy.types.Context):
         return False  # Disabled for now
         general_properties = context.scene.rct_graphics_helper_general_properties
-        return general_properties.objectType == "scenery_small"
+        return general_properties.objectType == "vehicle"
 
     def draw(self, context):
         layout = self.layout

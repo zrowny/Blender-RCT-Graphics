@@ -15,6 +15,7 @@ import os
 from . small_scenery_panel import update_small_scenery
 from . render_task import get_res_path, get_output_path
 from . import render_operator as render_operator
+from . import custom_properties as custom_properties
 from . custom_properties import create_size_preview
 
 
@@ -51,11 +52,15 @@ class RCTCreateRig(bpy.types.Operator):
         if rct_rig is None:
             rct_rig = objects.new("RCT_Rig", None)
             scene.objects.link(rct_rig)
+        rct_rig.hide = True
+        rct_rig.layers = [i == 10 for i in range(20)]
         rct_vertical_joint = objects.get('RCT_VerticalJoint')
         if rct_vertical_joint is None:
             rct_vertical_joint = objects.new("RCT_VerticalJoint", None)
             scene.objects.link(rct_vertical_joint)
         rct_vertical_joint.parent = rct_rig
+        rct_vertical_joint.hide = True
+        rct_vertical_joint.layers = [i == 10 for i in range(20)]
         rct_camera = objects.get('RCT_Camera')
         if objects.get('RCT_Camera') is None:
             rct_camera_data = bpy.data.cameras.new("RCT_Camera")
@@ -68,6 +73,8 @@ class RCTCreateRig(bpy.types.Operator):
                                (1/64)-20/math.sqrt(2), 20*math.tan(math.pi/6))
         rct_camera.rotation_euler = [math.pi/3, 0, -math.pi/4]
         rct_camera.parent = rct_vertical_joint
+        rct_camera.hide_select = True
+        rct_camera.layers = [i == 10 for i in range(20)]
         scene.camera = rct_camera
         scene.render.resolution_x = 256
         scene.render.resolution_y = 256
@@ -92,6 +99,7 @@ class RCTCreateRig(bpy.types.Operator):
             constraint.track_axis = "TRACK_NEGATIVE_Z"
             light.parent = rct_vertical_joint
             light.hide = True
+            light.layers = [i == 10 for i in range(20)]
 
             light = objects.get('RCT_Backlight')
             if objects.get('RCT_Backlight') is None:
@@ -109,6 +117,7 @@ class RCTCreateRig(bpy.types.Operator):
                 constraint.track_axis = "TRACK_NEGATIVE_Z"
                 light.parent = rct_vertical_joint
                 light.hide = True
+                light.layers = [i == 10 for i in range(20)]
 
             light = objects.get('RCT_FrontFillerLight')
             if objects.get('RCT_FrontFillerLight') is None:
@@ -127,6 +136,7 @@ class RCTCreateRig(bpy.types.Operator):
                 constraint.track_axis = "TRACK_NEGATIVE_Z"
                 light.parent = rct_vertical_joint
                 light.hide = True
+                light.layers = [i == 10 for i in range(20)]
 
             light = objects.get('RCT_LightDome')
             if objects.get('RCT_LightDome') is None:
@@ -142,6 +152,7 @@ class RCTCreateRig(bpy.types.Operator):
                 constraint.track_axis = "TRACK_NEGATIVE_Z"
                 light.parent = rct_vertical_joint
                 light.hide = True
+                light.layers = [i == 10 for i in range(20)]
 
             light = objects.get('RCT_ShadowCaster')
             if objects.get('RCT_ShadowCaster') is None:
@@ -162,6 +173,7 @@ class RCTCreateRig(bpy.types.Operator):
                 constraint.track_axis = "TRACK_NEGATIVE_Z"
                 light.parent = rct_vertical_joint
                 light.hide = True
+                light.layers = [i == 10 for i in range(20)]
 
             light = objects.get('RCT_SideFillerLight')
             if objects.get('RCT_SideFillerLight') is None:
@@ -179,6 +191,7 @@ class RCTCreateRig(bpy.types.Operator):
                 constraint.track_axis = "TRACK_NEGATIVE_Z"
                 light.parent = rct_vertical_joint
                 light.hide = True
+                light.layers = [i == 10 for i in range(20)]
 
             light = objects.get('RCT_SpecularLight')
             if objects.get('RCT_SpecularLight') is None:
@@ -195,6 +208,9 @@ class RCTCreateRig(bpy.types.Operator):
                 constraint.track_axis = "TRACK_NEGATIVE_Z"
                 light.parent = rct_vertical_joint
                 light.hide = True
+                light.layers = [i == 10 for i in range(20)]
+        
+        scene.layers = [scene.layers[i] or i == 10 for i in range(20)]
         
         create_size_preview()
         update_object_type(context.scene.rct_graphics_helper_general_properties, context)
@@ -362,7 +378,9 @@ class GeneralProperties(bpy.types.PropertyGroup):
     objectType = bpy.props.EnumProperty(
         items=[
             ("custom", "Custom", "Creates an object with custom properties"),
-            ("ride", "Ride", "Creates a Ride object"),
+            ("stall", "Stall", "Creates a Stall object"),
+            ("flat_ride", "Flat Ride", "Creates a Flat Ride object"),
+            ("vehicle", "Ride Vehicle", "Creates a Tracked Ride Vehicle object"),
             ("footpath_item", "Footpath Item", "Creates a Footpath Item object"),
             ("scenery_small", "Small Scenery", "Creates a Small Scenery object"),
             ("scenery_large", "Large Scenery", "Creates a Large Scenery object"),

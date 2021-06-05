@@ -586,10 +586,6 @@ class SmallSceneryPanel(bpy.types.Panel):
         layout = self.layout
         scene = context.scene
         small_scenery_properties = scene.rct_graphics_helper_small_scenery_properties  # type: SmallSceneryProperties
-
-        if small_scenery_properties.get("previews") is not None:
-            row = layout.row()
-            row.template_icon_view(small_scenery_properties, "previews")
         
         row = layout.row()
         row.operator("render.rct_small_scenery", text="Render Small Scenery Object")
