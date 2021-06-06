@@ -97,7 +97,14 @@ def process_strings(string_entries):
 
 
 def read_json_file(filepath):
-    
+    """Loads a JSON file from the given location
+
+    Args:
+        filepath (str): Absolute path to a JSON file
+
+    Returns:
+        dict: The converted data from the JSON file
+    """
     json_data = None
     with open(filepath) as json_file:
         json_data = json.load(json_file)

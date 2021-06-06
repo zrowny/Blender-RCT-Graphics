@@ -309,7 +309,16 @@ def add_small_scenery_properties_json(context):
 
 
 def set_small_scenery_properties(context, json_data):
-    no_error = True
+    """Sets the small scenery properties from the given data
+
+    Args:
+        context (bpy.types.Context): Context
+        json_data (dict): The `properties` field of a JSON object
+
+    Returns:
+        str: If not empty, a warning message to display.
+    """
+    warning = ""
     
     properties = context.scene.rct_graphics_helper_small_scenery_properties  # type: SmallSceneryProperties
     set_property(properties, json_data, 'height')
@@ -364,9 +373,8 @@ def set_small_scenery_properties(context, json_data):
             set_property(properties, json_data, 'SMALL_SCENERY_FLAG_VISIBLE_WHEN_ZOOMED', False)
             set_property(properties, json_data, 'hasOverlayImage', False)
         else:
-            no_error = False
-
-    return no_error
+            warning = "JSON has \"isAnimated\" set but does not specify an animation type."
+    return warning
 
 
 class RenderSmallScenery(RCTRender, bpy.types.Operator):
