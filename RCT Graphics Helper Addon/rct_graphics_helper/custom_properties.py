@@ -12,6 +12,20 @@ from bpy.types import Action, EnumProperty, Property, bpy_struct
 from . json_functions import group_as_dict
 
 
+def set_property(properties, json_data, property, default=None):
+    value = json_data.get(property, None)
+    if value is None:
+        if default is not None:
+            value = default
+        else:
+            return None
+    elif isinstance(value, list):
+        value = ", ".join(value)
+    setattr(properties, property, value)
+    print("%s: %s" % (property, value))
+    return value
+
+
 def create_size_preview():
     """Generates the meshes and objects to show the size "preview"."""
     scene = bpy.context.scene

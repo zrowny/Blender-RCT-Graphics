@@ -96,6 +96,14 @@ def process_strings(string_entries):
     return strings
 
 
+def read_json_file(filepath):
+    
+    json_data = None
+    with open(filepath) as json_file:
+        json_data = json.load(json_file)
+    return json_data
+
+
 def write_json_file():
     """Converts the object info to JSON format and writes the JSON file."""
     with open(get_output_path("object.json"), "w") as offset_file:

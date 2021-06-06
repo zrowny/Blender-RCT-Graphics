@@ -7,16 +7,19 @@ Interested in contributing? Visit https://github.com/oli414/Blender-RCT-Graphics
 RCT Graphics Helper is licensed under the GNU General Public License version 3.
 '''
 
+import json
 from sys import version
+from typing import Iterable
 import bpy
 import bpy.utils.previews
 import math
 import os
-from . small_scenery_panel import update_small_scenery
+from . small_scenery_panel import update_small_scenery, set_small_scenery_properties
 from . render_task import get_res_path, get_output_path
 from . import render_operator as render_operator
 from . import custom_properties as custom_properties
-from . custom_properties import create_size_preview
+from . import json_functions as json_functions
+from . custom_properties import create_size_preview, set_property
 
 
 def enum_previews_from_directory_items(self, context):
@@ -37,6 +40,109 @@ def enum_previews_from_directory_items(self, context):
         pcoll.my_previews = enum_items
 
     return pcoll.my_previews
+
+
+def set_general_properties(context, json_data):
+    general_properties = context.scene.rct_graphics_helper_general_properties  # type: GeneralProperties
+    set_property(general_properties, json_data, 'id')
+    set_property(general_properties, json_data, 'originalId')
+    set_property(general_properties, json_data, 'authors')
+    set_property(general_properties, json_data, 'version')
+    set_property(general_properties, json_data, 'sourceGame')
+    set_property(general_properties, json_data, 'objectType')
+    strings = json_data.get("strings", None)
+    if strings is not None:
+        name = strings.get("name", None)  # type: dict
+        if name is not None:
+            name_strings = general_properties.name_strings
+            name_strings.clear()
+            for language, value in name.items():
+                entry = general_properties.name_strings.add()  # type: StringsEntry
+                entry.language = language
+                entry.value = value
+        description = strings.get("description", None)
+        if description is not None:
+            description_strings = general_properties.description_strings
+            description_strings.clear()
+            for language, value in description.items():
+                entry = general_properties.description_strings.add()  # type: StringsEntry
+                entry.language = language
+                entry.value = value
+        capacity = strings.get("capacity", None)
+        if capacity is not None:
+            capacity_strings = general_properties.capacity_strings
+            capacity_strings.clear()
+            for language, value in capacity.items():
+                entry = general_properties.capacity_strings.add()  # type: StringsEntry
+                entry.language = language
+                entry.value = value
+
+
+object_prop_load_warn = "Cannot load object properties."
+object_type_unsupported = "Type '%s' is not currently supported. " + object_prop_load_warn
+object_prop_load_issue = "Issue loading object properties for type '%s'."
+
+
+class RCTImportJSON(bpy.types.Operator):
+    """Create rendering rig and size preview"""
+    bl_idname = "render.rct_import_json"
+    bl_label = "Import Existing JSON"
+    
+    filepath = bpy.props.StringProperty(subtype="FILE_PATH")
+
+    def execute(self, context: bpy.types.Context):
+        print(self.filepath)
+        json_data = json_functions.read_json_file(self.filepath)
+        if json_data is None:
+            self.report({'WARNING'}, "JSON file contains no data.")
+        elif not isinstance(json_data, dict):
+            self.report({'WARNING'}, "JSON file contains invalid data.")
+        else:
+            print(json_data)
+            set_general_properties(context, json_data)
+            object_type = json_data.get("objectType", None)
+            if object_type is None:
+                self.report({'WARNING'}, "JSON file has no objectType. " + object_prop_load_warn)
+            elif object_type == 'ride':
+                self.report({'WARNING'}, object_type_unsupported % object_type)
+            elif object_type == 'scenery_small':
+                if not set_small_scenery_properties(context, json_data.get("properties")):
+                    self.report({'WARNING'}, object_prop_load_issue % object_type)
+            # elif object_type == 'footpath':
+            #     pass
+            # elif object_type == 'footpath_banner':
+            #     pass
+            # elif object_type == 'footpath_item':
+            #     pass
+            # elif object_type == 'scenery_large':
+            #     pass
+            # elif object_type == 'scenery_wall':
+            #     pass
+            # elif object_type == 'scenery_group':
+            #     pass
+            # elif object_type == 'park_entrance':
+            #     pass
+            # elif object_type == 'water':
+            #     pass
+            # elif object_type == 'terrain_surface':
+            #     pass
+            # elif object_type == 'terrain_edge':
+            #     pass
+            # elif object_type == 'station':
+            #     pass
+            # elif object_type == 'music':
+            #     pass
+            # elif object_type == 'footpath_surface':
+            #     pass
+            # elif object_type == 'footpath_railings':
+            #     pass
+            else:
+                self.report({'WARNING'}, object_type_unsupported % object_type)
+        return {"FINISHED"}
+    
+    def invoke(self, context: bpy.types.Context, event):
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
 
 
 class RCTCreateRig(bpy.types.Operator):
@@ -446,6 +552,8 @@ class GeneralPanel(bpy.types.Panel):
         scene = context.scene
         wm = context.window_manager
         general_properties = scene.rct_graphics_helper_general_properties
+        row = layout.row()
+        row.operator("render.rct_import_json")
         # Draw previews
         row = layout.row()
         col = row.column()
