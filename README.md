@@ -19,7 +19,7 @@ The Render tab should now contain new panels (they appear at the bottom by defau
 
 1. In a new or existing file, go to the `RCT General` panel and click `Set Up Rendering Rig`.
 3. In the `General` panel and the panel for the object type, configure the properties you want for this object. Each property will have a tooltip when you hover over it that will have more information
-  - In the future, you will be able to import an existing object JSON file and the properties will be loaded from that.
+  - For supported object types (just small scenery for now), click "Import Existing JSON" to use the properties from an existing JSON object.
 4. Create your object, give it materials, etc.
 5. Make sure to save your .blend file (preferable in its own folder)!
 6. Click `Render [TYPE] Object`. Once it's done rendering, the results will be in the output folder next to the .blend file.
