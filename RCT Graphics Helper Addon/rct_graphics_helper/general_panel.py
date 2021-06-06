@@ -19,7 +19,7 @@ from . render_task import get_res_path, get_output_path
 from . import render_operator as render_operator
 from . import custom_properties as custom_properties
 from . import json_functions as json_functions
-from . custom_properties import create_size_preview, set_property
+from . custom_properties import create_size_preview, set_property, process_ride_type
 
 
 def enum_previews_from_directory_items(self, context):
@@ -43,13 +43,23 @@ def enum_previews_from_directory_items(self, context):
 
 
 def set_general_properties(context, json_data):
+    """Sets the general object properties from the given json_data
+
+    Args:
+        context (bpy.types.Context): Context
+        json_data (dict): A dictionary containing converted data from a JSON object
+    """
     general_properties = context.scene.rct_graphics_helper_general_properties  # type: GeneralProperties
     set_property(general_properties, json_data, 'id')
     set_property(general_properties, json_data, 'originalId')
     set_property(general_properties, json_data, 'authors')
     set_property(general_properties, json_data, 'version')
     set_property(general_properties, json_data, 'sourceGame')
-    set_property(general_properties, json_data, 'objectType')
+    object_type = json_data.get('objectType', None)
+    if object_type == 'ride':
+        general_properties.objectType = process_ride_type(json_data)
+    elif object_type is not None:
+        general_properties.objectType = object_type
     strings = json_data.get("strings", None)
     if strings is not None:
         name = strings.get("name", None)  # type: dict
@@ -81,10 +91,28 @@ def set_general_properties(context, json_data):
 object_prop_load_warn = "Cannot load object properties."
 object_type_unsupported = "Type '%s' is not currently supported. " + object_prop_load_warn
 object_prop_load_issue = "Issue loading object properties for type '%s'."
+object_functions = {
+    "scenery_small": set_small_scenery_properties,
+    # "ride": set_ride_properties,
+    # "footpath": set_footpath_properties,
+    # "footpath_banner": set_footpath_banner_properties,
+    # "footpath_item": set_footpath_item_properties,
+    # "scenery_large": set_scenery_large_properties,
+    # "scenery_wall": set_scenery_wall_properties,
+    # "scenery_group": set_scenery_group_properties,
+    # "park_entrance": set_park_entrance_properties,
+    # "water": set_water_properties,
+    # "terrain_surface": set_terrain_surface_properties,
+    # "terrain_edge": set_terrain_edge_properties,
+    # "station": set_station_properties,
+    # "music": set_music_properties,
+    # "footpath_surface": set_footpath_surface_properties,
+    # "footpath_railings": set_footpath_railings_properties
+}
 
 
 class RCTImportJSON(bpy.types.Operator):
-    """Create rendering rig and size preview"""
+    """Imports properties from a user-selected JSON object file"""
     bl_idname = "render.rct_import_json"
     bl_label = "Import Existing JSON"
     
@@ -103,39 +131,10 @@ class RCTImportJSON(bpy.types.Operator):
             object_type = json_data.get("objectType", None)
             if object_type is None:
                 self.report({'WARNING'}, "JSON file has no objectType. " + object_prop_load_warn)
-            elif object_type == 'ride':
-                self.report({'WARNING'}, object_type_unsupported % object_type)
-            elif object_type == 'scenery_small':
-                if not set_small_scenery_properties(context, json_data.get("properties")):
-                    self.report({'WARNING'}, object_prop_load_issue % object_type)
-            # elif object_type == 'footpath':
-            #     pass
-            # elif object_type == 'footpath_banner':
-            #     pass
-            # elif object_type == 'footpath_item':
-            #     pass
-            # elif object_type == 'scenery_large':
-            #     pass
-            # elif object_type == 'scenery_wall':
-            #     pass
-            # elif object_type == 'scenery_group':
-            #     pass
-            # elif object_type == 'park_entrance':
-            #     pass
-            # elif object_type == 'water':
-            #     pass
-            # elif object_type == 'terrain_surface':
-            #     pass
-            # elif object_type == 'terrain_edge':
-            #     pass
-            # elif object_type == 'station':
-            #     pass
-            # elif object_type == 'music':
-            #     pass
-            # elif object_type == 'footpath_surface':
-            #     pass
-            # elif object_type == 'footpath_railings':
-            #     pass
+            elif object_type in object_functions.keys():
+                warning = object_functions[object_type](context, json_data.get("properties"))
+                if warning:
+                    self.report({'WARNING'}, warning)
             else:
                 self.report({'WARNING'}, object_type_unsupported % object_type)
         return {"FINISHED"}

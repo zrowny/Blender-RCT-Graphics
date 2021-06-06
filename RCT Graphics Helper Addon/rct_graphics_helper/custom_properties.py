@@ -12,7 +12,35 @@ from bpy.types import Action, EnumProperty, Property, bpy_struct
 from . json_functions import group_as_dict
 
 
+# Processing Ride type
+#######################
+
+ride_type_stall = ("food_stall", "drink_stall", "shop", "information_kiosk", "toilets", "cash_machine", "first_aid")
+
+
+def process_ride_type(json_data):
+    properties = json_data.get('properties', None)
+    if properties is not None:
+        type = properties.get('type', None)
+        if type in ride_type_stall:
+            return 'stall'
+    return None
+
+
 def set_property(properties, json_data, property, default=None):
+    """Safely sets a given property in a PropertyGroup from the given data
+
+    Args:
+        properties (bpy.types.PropertyGroup): The group to set a property in
+        json_data (dict): A dict from which to take a property
+        property (str): The key of the property to use
+        default (Any, optional): A default value to use if `property` does not
+            exist in `json_data`. If `None`, the property will not be updated
+            if it doesn't exist in `json_data`
+
+    Returns:
+        Any: The value that was actually set in `properties`
+    """
     value = json_data.get(property, None)
     if value is None:
         if default is not None:
@@ -22,7 +50,7 @@ def set_property(properties, json_data, property, default=None):
     elif isinstance(value, list):
         value = ", ".join(value)
     setattr(properties, property, value)
-    print("%s: %s" % (property, value))
+    # print("%s: %s" % (property, value))
     return value
 
 
