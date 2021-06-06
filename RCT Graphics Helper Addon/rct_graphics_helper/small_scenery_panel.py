@@ -17,6 +17,7 @@ from bpy.types import UILayout
 from . render_operator import RCTRender
 from . render_task import *
 from . import custom_properties as custom_properties
+from . custom_properties import set_property
 from . import json_functions as json_functions
 
 
@@ -305,6 +306,67 @@ def add_small_scenery_properties_json(context):
     if json_properties.get("sceneryGroup", None) == "":
         json_properties.pop("sceneryGroup", None)
     json_functions.json_data["properties"] = json_properties
+
+
+def set_small_scenery_properties(context, json_data):
+    no_error = True
+    
+    properties = context.scene.rct_graphics_helper_small_scenery_properties  # type: SmallSceneryProperties
+    set_property(properties, json_data, 'height')
+    set_property(properties, json_data, 'cursor')
+    set_property(properties, json_data, 'price')
+    set_property(properties, json_data, 'removalPrice')
+    set_property(properties, json_data, 'sceneryGroup')
+    set_property(properties, json_data, 'hasPrimaryColour', False)
+    set_property(properties, json_data, 'hasSecondaryColour', False)
+    set_property(properties, json_data, 'hasGlass', False)
+    set_property(properties, json_data, 'shape')
+    set_property(properties, json_data, 'SMALL_SCENERY_FLAG_VOFFSET_CENTRE', False)
+    set_property(properties, json_data, 'prohibitWalls', False)
+    set_property(properties, json_data, 'SMALL_SCENERY_FLAG27', False)
+    set_property(properties, json_data, 'requiresFlatSurface', False)
+    set_property(properties, json_data, 'isStackable', False)
+    set_property(properties, json_data, 'hasNoSupports', False)
+    set_property(properties, json_data, 'allowSupportsAbove', False)
+    set_property(properties, json_data, 'supportsHavePrimaryColour', False)
+    set_property(properties, json_data, 'isRotatable', False)
+    set_property(properties, json_data, 'isTree', False)
+    set_property(properties, json_data, 'canWither', False)
+    set_property(properties, json_data, 'canBeWatered', False)
+    if set_property(properties, json_data, 'isAnimated', False):
+        frameOffsets = json_data.get('frameOffsets', None)
+        if frameOffsets is not None:
+            properties.animation_type = 'use_frame_offsets'
+            properties.frameOffsets.clear()
+            for frame in frameOffsets:
+                item = properties.frameOffsets.add()
+                item.value = frame
+            set_property(properties, json_data, 'SMALL_SCENERY_FLAG17', False)
+            set_property(properties, json_data, 'SMALL_SCENERY_FLAG_VISIBLE_WHEN_ZOOMED', False)
+            set_property(properties, json_data, 'hasOverlayImage', False)
+            set_property(properties, json_data, 'SMALL_SCENERY_FLAG_COG', False)
+            set_property(properties, json_data, 'animationDelay', False)
+            set_property(properties, json_data, 'animationMask', False)
+        elif json_data.get('SMALL_SCENERY_FLAG_FOUNTAIN_SPRAY_1', False):
+            properties.animation_type = 'SMALL_SCENERY_FLAG_FOUNTAIN_SPRAY_1'
+            set_property(properties, json_data, 'SMALL_SCENERY_FLAG_VISIBLE_WHEN_ZOOMED', False)
+            set_property(properties, json_data, 'hasOverlayImage')
+        elif json_data.get('SMALL_SCENERY_FLAG_FOUNTAIN_SPRAY_4', False):
+            properties.animation_type = 'SMALL_SCENERY_FLAG_FOUNTAIN_SPRAY_4'
+            set_property(properties, json_data, 'SMALL_SCENERY_FLAG_VISIBLE_WHEN_ZOOMED', False)
+            set_property(properties, json_data, 'hasOverlayImage', False)
+        elif json_data.get('isClock', False):
+            properties.animation_type = 'isClock'
+            set_property(properties, json_data, 'SMALL_SCENERY_FLAG_VISIBLE_WHEN_ZOOMED', False)
+            set_property(properties, json_data, 'hasOverlayImage', False)
+        elif json_data.get('SMALL_SCENERY_FLAG_SWAMP_GOO', False):
+            properties.animation_type = 'SMALL_SCENERY_FLAG_SWAMP_GOO'
+            set_property(properties, json_data, 'SMALL_SCENERY_FLAG_VISIBLE_WHEN_ZOOMED', False)
+            set_property(properties, json_data, 'hasOverlayImage', False)
+        else:
+            no_error = False
+
+    return no_error
 
 
 class RenderSmallScenery(RCTRender, bpy.types.Operator):
