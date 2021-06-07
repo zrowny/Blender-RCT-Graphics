@@ -16,14 +16,35 @@ from . json_functions import group_as_dict
 #######################
 
 ride_type_stall = ("food_stall", "drink_stall", "shop", "information_kiosk", "toilets", "cash_machine", "first_aid")
+ride_type_vehicle = (
+    "spiral_rc", "stand_up_rc", "suspended_swinging_rc", "inverted_rc", "junior_rc", "miniature_railway", "monorail",
+    "mini_suspended_rc", "boat_hire", "wooden_wild_mouse", "steeplechase", "car_ride", "launched_freefall",
+    "bobsleigh_rc", "observation_tower", "looping_rc", "dinghy_slide", "mine_train_rc", "chairlift", "corkscrew_rc",
+    "maze", "go_karts", "log_flume", "river_rapids", "reverse_freefall_rc", "lift", "vertical_drop_rc", "ghost_train",
+    "twister_rc", "wooden_rc", "side_friction_rc", "steel_wild_mouse", "multi_dimension_rc", "flying_rc",
+    "virginia_reel", "splash_boats", "mini_helicopters", "lay_down_rc", "suspended_monorail", "reverser_rc",
+    "heartline_twister_rc", "mini_golf", "giga_rc", "roto_drop", "monorail_cycles", "compact_inverted_rc",
+    "water_coaster", "air_powered_vertical_rc", "inverted_hairpin_rc", "submarine_ride", "river_rafts",
+    "inverted_impulse_rc", "mini_rc", "mine_ride", "lim_launched_rc", "hypercoaster", "hyper_twister",
+    "monster_trucks", "spinning_wild_mouse", "classic_mini_rc", "hybrid_rc", "single_rail_rc")
+ride_type_flat = (
+    "circus", "crooked_house", "dodgems", "ferris_wheel", "flying_saucers", "haunted_house", "merry_go_round",
+    "space_rings", "spiral_slide", "3d_cinema", "enterprise", "magic_carpet", "motion_simulator", "swinging_ship",
+    "swinging_inverter_ship", "top_spin", "twist", )
 
 
 def process_ride_type(json_data):
     properties = json_data.get('properties', None)
     if properties is not None:
         type = properties.get('type', None)
+        if isinstance(type, list):
+            type = type[0]
         if type in ride_type_stall:
             return 'stall'
+        if type in ride_type_flat:
+            return 'flat_ride'
+        if type in ride_type_vehicle:
+            return 'vehicle'
     return None
 
 
@@ -286,6 +307,24 @@ colour = bpy.props.EnumProperty(
 # Car Colours
 ##############
 
+def set_car_colours(context, carColours):
+    scene = context.scene  # bpy.types.Scene
+    if carColours is not None:
+        scene.carColours.clear()
+        if len(carColours) == 1:
+            for entry in carColours[0]:
+                item = scene.carColours.add()  # type: CarColourItem
+                item.colour1 = entry[0]
+                item.colour2 = entry[1]
+                item.colour3 = entry[2]
+        elif len(carColours) > 1:
+            for entry in carColours:
+                item = scene.carColours.add()  # type: CarColourItem
+                item.colour1 = entry[0][0]
+                item.colour2 = entry[0][1]
+                item.colour3 = entry[0][2]
+
+
 class CarColours_OT_actions(bpy.types.Operator):
     """Buttons to add/remove/move a car colour item."""
     bl_idname = "carcolours.actions"
@@ -327,6 +366,7 @@ class CarColours_OT_actions(bpy.types.Operator):
 
 class CarColours_UL_List(bpy.types.UIList):
     """Defines the drawing function for each car colour item"""
+
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
             row = layout.row(align=True)
@@ -363,6 +403,8 @@ class CarColourItem(bpy.types.PropertyGroup):
 def process_car_colours(context):
     car_colours = []
     raw_car_colours = [group_as_dict(i) for i in context.scene.carColours]  # type: list[CarColourItem]
+    if not raw_car_colours:
+        return [[["black", "black", "black"]]]
     for entry in raw_car_colours:
         if context.scene.car_colours_single_preset:
             car_colours.append([[entry['colour1'], entry['colour2'], entry['colour3']]])

@@ -15,6 +15,7 @@ import bpy.utils.previews
 import math
 import os
 from . small_scenery_panel import update_small_scenery, set_small_scenery_properties
+from . stall_panel import set_stall_properties
 from . render_task import get_res_path, get_output_path
 from . import render_operator as render_operator
 from . import custom_properties as custom_properties
@@ -93,7 +94,9 @@ object_type_unsupported = "Type '%s' is not currently supported. " + object_prop
 object_prop_load_issue = "Issue loading object properties for type '%s'."
 object_functions = {
     "scenery_small": set_small_scenery_properties,
-    # "ride": set_ride_properties,
+    "stall": set_stall_properties,
+    # "flat_ride": set_flat_ride_properties,
+    # "vehicle": set_vehicle_properties,
     # "footpath": set_footpath_properties,
     # "footpath_banner": set_footpath_banner_properties,
     # "footpath_item": set_footpath_item_properties,
@@ -128,7 +131,7 @@ class RCTImportJSON(bpy.types.Operator):
         else:
             print(json_data)
             set_general_properties(context, json_data)
-            object_type = json_data.get("objectType", None)
+            object_type = context.scene.rct_graphics_helper_general_properties.objectType
             if object_type is None:
                 self.report({'WARNING'}, "JSON file has no objectType. " + object_prop_load_warn)
             elif object_type in object_functions.keys():

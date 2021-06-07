@@ -18,6 +18,7 @@ from . render_operator import RCTRender
 from . render_task import *
 from . import custom_properties as custom_properties
 from . import json_functions as json_functions
+from . custom_properties import set_property, set_car_colours
 
 
 def update_stall(self, context: bpy.types.Context):
@@ -59,6 +60,40 @@ def update_stall(self, context: bpy.types.Context):
     objects.get("RCT_Half_Tile").hide = True
 
 
+def set_stall_properties(context, json_data):
+    """Sets the stall properties from the given data
+
+    Args:
+        context (bpy.types.Context): Context
+        json_data (dict): The `properties` field of a JSON object
+
+    Returns:
+        str: If not empty, a warning message to display.
+    """
+    warning = ""
+    scene = context.scene
+    properties = scene.rct_graphics_helper_stall_properties  # type: StallProperties
+    set_property(properties, json_data, 'type')
+    set_property(properties, json_data, 'disablePainting')
+    sells = json_data.get('sells', None)
+    properties.sells = 'none'
+    properties.sells2 = 'none'
+    if sells is not None:
+        if isinstance(sells, str):
+            properties.sells = sells
+        elif isinstance(sells, list):
+            if len(sells) == 1:
+                properties.sells = sells[0]
+            elif len(sells) >= 2:
+                properties.sells = sells[0]
+                properties.sells2 = sells[1]
+        else:
+            warning = "Property \"sells\" is not an array or a string."
+    set_car_colours(context, json_data.get('carColours', None))
+
+    return warning
+
+
 def add_stall_properties_json(context):
     """Processes stall properties and adds them to the global JSON"""
     json_properties = json_functions.group_as_dict(context.scene.rct_graphics_helper_stall_properties)
@@ -67,8 +102,8 @@ def add_stall_properties_json(context):
     sells2 = json_properties.pop("sells2", "none")
     sells = []
     type = json_properties.get("type")
-    raw_car_colours = custom_properties.process_car_colours(context)
-    json_properties["carColours"] = raw_car_colours
+    carColours = custom_properties.process_car_colours(context)
+    json_properties["carColours"] = carColours
     if type not in ("toilets", "first_aid", "cash_machine"):
         if sells1 in recolorable_shop_items:
             if sells2 != "none":
