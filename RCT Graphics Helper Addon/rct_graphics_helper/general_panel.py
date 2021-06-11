@@ -15,7 +15,8 @@ import bpy.utils.previews
 import math
 import os
 from . small_scenery_panel import update_small_scenery, set_small_scenery_properties
-from . stall_panel import set_stall_properties
+from . stall_panel import update_stall, set_stall_properties
+from . vehicles_panel import update_vehicles, set_vehicles_properties
 from . render_task import get_res_path, get_output_path
 from . import render_operator as render_operator
 from . import custom_properties as custom_properties
@@ -96,7 +97,7 @@ object_functions = {
     "scenery_small": set_small_scenery_properties,
     "stall": set_stall_properties,
     # "flat_ride": set_flat_ride_properties,
-    # "vehicle": set_vehicle_properties,
+    "vehicle": set_vehicles_properties,
     # "footpath": set_footpath_properties,
     # "footpath_banner": set_footpath_banner_properties,
     # "footpath_item": set_footpath_item_properties,
@@ -347,7 +348,12 @@ def update_object_type(self, context):
     if self.objectType == "scenery_small":
         small_scenery_properties = context.scene.rct_graphics_helper_small_scenery_properties
         update_small_scenery(small_scenery_properties, context)
-    pass
+    elif self.objectType == "vehicle":
+        vehicles_properties = context.scene.rct_graphics_helper_vehicles_properties
+        update_vehicles(vehicles_properties, context)
+    elif self.objectType == 'stall':
+        stall_properties = context.scene.rct_graphics_helper_stall_properties
+        update_stall(stall_properties, context)
 
 
 # String entries
@@ -488,7 +494,7 @@ class GeneralProperties(bpy.types.PropertyGroup):
             ("custom", "Custom", "Creates an object with custom properties"),
             ("stall", "Stall", "Creates a Stall object"),
             ("flat_ride", "Flat Ride", "Creates a Flat Ride object"),
-            ("vehicle", "Ride Vehicle", "Creates a Tracked Ride Vehicle object"),
+            ("vehicle", "Ride Vehicles", "Creates a Ride Vehicles object"),
             ("footpath_item", "Footpath Item", "Creates a Footpath Item object"),
             ("scenery_small", "Small Scenery", "Creates a Small Scenery object"),
             ("scenery_large", "Large Scenery", "Creates a Large Scenery object"),
@@ -649,6 +655,7 @@ def collhack(scene):
     """Runs initial code for initialization of this panel"""
     print("Initializing")
     bpy.app.handlers.scene_update_pre.remove(collhack)
+    bpy.ops.render.rct_create_rig()
     update_object_type(
         scene.rct_graphics_helper_general_properties, bpy.context)
 

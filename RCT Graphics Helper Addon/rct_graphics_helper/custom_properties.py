@@ -7,6 +7,7 @@ Interested in contributing? Visit https://github.com/oli414/Blender-RCT-Graphics
 RCT Graphics Helper is licensed under the GNU General Public License version 3.
 '''
 
+import math
 import bpy
 from bpy.types import Action, EnumProperty, Property, bpy_struct
 from . json_functions import group_as_dict
@@ -15,6 +16,87 @@ from . json_functions import group_as_dict
 # Processing Ride type
 #######################
 
+ride_types = [
+    ("spiral_rc", "Spiral Roller Coaster", "spiral_rc"),
+    ("stand_up_rc", "Stand-up Roller Coaster", "stand_up_rc"),
+    ("suspended_swinging_rc", "Suspended Swinging Coaster", "suspended_swinging_rc"),
+    ("inverted_rc", "Inverted Roller Coaster", "inverted_rc"),
+    ("junior_rc", "Junior Roller Coaster", "junior_rc"),
+    ("miniature_railway", "Miniature Railway", "miniature_railway"),
+    ("monorail", "Monorail", "monorail"),
+    ("mini_suspended_rc", "Mini Suspended Coaster", "mini_suspended_rc"),
+    ("boat_hire", "Boat Hire", "boat_hire"),
+    ("wooden_wild_mouse", "Wooden Wild Mouse", "wooden_wild_mouse"),
+    ("steeplechase", "Steeplechase", "steeplechase"),
+    ("car_ride", "Car Ride", "car_ride"),
+    ("launched_freefall", "Launched Freefall", "launched_freefall"),
+    ("bobsleigh_rc", "Bobsleigh Coaster", "bobsleigh_rc"),
+    ("observation_tower", "Observation Tower", "observation_tower"),
+    ("looping_rc", "Looping Roller Coaster", "looping_rc"),
+    ("dinghy_slide", "Dinghy Slide", "dinghy_slide"),
+    ("mine_train_rc", "Mine Train Coaster", "mine_train_rc"),
+    ("chairlift", "Chairlift", "chairlift"),
+    ("corkscrew_rc", "Corkscrew Roller Coaster", "corkscrew_rc"),
+    ("maze", "Maze", "maze"),
+    ("spiral_slide", "Spiral Slide", "spiral_slide"),
+    ("go_karts", "Go-Karts", "go_karts"),
+    ("log_flume", "Log Flume", "log_flume"),
+    ("river_rapids", "River Rapids", "river_rapids"),
+    ("dodgems", "Dodgems", "dodgems"),
+    ("swinging_ship", "Swinging Ship", "swinging_ship"),
+    ("swinging_inverter_ship", "Swinging Inverter Ship", "swinging_inverter_ship"),
+    ("merry_go_round", "Merry-Go-Round", "merry_go_round"),
+    ("ferris_wheel", "Ferris Wheel", "ferris_wheel"),
+    ("motion_simulator", "Motion Simulator", "motion_simulator"),
+    ("3d_cinema", "3D Cinema", "3d_cinema"),
+    ("top_spin", "Top Spin", "top_spin"),
+    ("space_rings", "Space Rings", "space_rings"),
+    ("reverse_freefall_rc", "Reverse Freefall Coaster", "reverse_freefall_rc"),
+    ("lift", "Lift", "lift"),
+    ("vertical_drop_rc", "Vertical Drop Roller Coaster", "vertical_drop_rc"),
+    ("cash_machine", "Cash Machine", "cash_machine"),
+    ("twist", "Twist", "twist"),
+    ("haunted_house", "Haunted House", "haunted_house"),
+    ("circus", "Circus", "circus"),
+    ("ghost_train", "Ghost Train", "ghost_train"),
+    ("twister_rc", "Twister Roller Coaster", "twister_rc"),
+    ("wooden_rc", "Wooden Roller Coaster", "wooden_rc"),
+    ("side_friction_rc", "Side-Friction Roller Coaster", "side_friction_rc"),
+    ("steel_wild_mouse", "Steel Wild Mouse", "steel_wild_mouse"),
+    ("multi_dimension_rc", "Multi-Dimension Roller Coaster", "multi_dimension_rc"),
+    ("flying_rc", "Flying Roller Coaster", "flying_rc"),
+    ("virginia_reel", "Virginia Reel", "virginia_reel"),
+    ("splash_boats", "Splash Boats", "splash_boats"),
+    ("mini_helicopters", "Mini Helicopters", "mini_helicopters"),
+    ("lay_down_rc", "Lay-down Roller Coaster", "lay_down_rc"),
+    ("suspended_monorail", "Suspended Monorail", "suspended_monorail"),
+    ("reverser_rc", "Reverser Roller Coaster", "reverser_rc"),
+    ("heartline_twister_rc", "Heartline Twister Coaster", "heartline_twister_rc"),
+    ("mini_golf", "Mini Golf", "mini_golf"),
+    ("giga_rc", "Giga Coaster", "giga_rc"),
+    ("roto_drop", "Roto-Drop", "roto_drop"),
+    ("flying_saucers", "Flying Saucers", "flying_saucers"),
+    ("crooked_house", "Crooked House", "crooked_house"),
+    ("monorail_cycles", "Monorail Cycles", "monorail_cycles"),
+    ("compact_inverted_rc", "Compact Inverted Coaster", "compact_inverted_rc"),
+    ("water_coaster", "Water Coaster", "water_coaster"),
+    ("air_powered_vertical_rc", "Air Powered Vertical Coaster", "air_powered_vertical_rc"),
+    ("inverted_hairpin_rc", "Inverted Hairpin Coaster", "inverted_hairpin_rc"),
+    ("magic_carpet", "Magic Carpet", "magic_carpet"),
+    ("submarine_ride", "Submarine Ride", "submarine_ride"),
+    ("river_rafts", "River Rafts", "river_rafts"),
+    ("enterprise", "Enterprise", "enterprise"),
+    ("inverted_impulse_rc", "Inverted Impulse Coaster", "inverted_impulse_rc"),
+    ("mini_rc", "Mini Roller Coaster", "mini_rc"),
+    ("mine_ride", "Mine Ride", "mine_ride"),
+    ("lim_launched_rc", "LIM Launched Roller Coaster", "lim_launched_rc"),
+    ("hypercoaster", "Hypercoaster", "hypercoaster"),
+    ("hyper_twister", "Hyper-Twister", "hyper_twister"),
+    ("monster_trucks", "Monster Trucks", "monster_trucks"),
+    ("spinning_wild_mouse", "Spinning Wild Mouse", "spinning_wild_mouse"),
+    ("classic_mini_rc", "Classic Mini Roller Coaster", "classic_mini_rc"),
+    ("hybrid_rc", "Hybrid Coaster", "hybrid_rc"),
+    ("single_rail_rc", "Single Rail Roller Coaster", "single_rail_rc")]
 ride_type_stall = ("food_stall", "drink_stall", "shop", "information_kiosk", "toilets", "cash_machine", "first_aid")
 ride_type_vehicle = (
     "spiral_rc", "stand_up_rc", "suspended_swinging_rc", "inverted_rc", "junior_rc", "miniature_railway", "monorail",
@@ -28,7 +110,7 @@ ride_type_vehicle = (
     "inverted_impulse_rc", "mini_rc", "mine_ride", "lim_launched_rc", "hypercoaster", "hyper_twister",
     "monster_trucks", "spinning_wild_mouse", "classic_mini_rc", "hybrid_rc", "single_rail_rc")
 ride_type_flat = (
-    "circus", "crooked_house", "dodgems", "ferris_wheel", "flying_saucers", "haunted_house", "merry_go_round",
+    "circus", "crooked_house", "ferris_wheel", "haunted_house", "merry_go_round",
     "space_rings", "spiral_slide", "3d_cinema", "enterprise", "magic_carpet", "motion_simulator", "swinging_ship",
     "swinging_inverter_ship", "top_spin", "twist", )
 
@@ -165,6 +247,61 @@ def create_size_preview():
     rct_box.layers = [i == 10 for i in range(20)]
     scene.layers = [scene.layers[i] or i == 10 for i in range(20)]
 
+    rct_empty = objects.get("RCT_Vehicle_Arrow")
+    if rct_empty is None:
+        rct_empty = objects.new("RCT_Vehicle_Arrow", None)
+        scene.objects.link(rct_empty)
+    rct_empty.hide = True
+    rct_empty.hide_select = True
+    rct_empty.empty_draw_type = 'SINGLE_ARROW'
+    # rct_empty.scale = (0.025516, 1.0, 1.0)
+    rct_empty.rotation_euler = [0, -math.pi/2, 0]
+    rct_empty.location = (0.5, 0, 0)
+    # rct_empty.parent = rct_size_preview
+    rct_empty.layers = [i == 10 for i in range(20)]
+
+    rct_box = objects.get("RCT_Plaform")
+    if rct_box is None:
+        vertices = [(-0.5, 0.25, 0.0), (-0.5, 0.25, 0.025516), (-0.5, 0.5, 0.0), (-0.5, 0.5, 0.025516),
+                    (0.5, 0.25, 0.0), (0.5, 0.25, 0.025516), (0.5, 0.5, 0.0), (0.5, 0.5, 0.025516), (-0.5, -0.5, 0.0),
+                    (-0.5, -0.5, 0.025516), (-0.5, -0.25, 0.0), (-0.5, -0.25, 0.025516), (0.5, -0.5, 0.0),
+                    (0.5, -0.5, 0.025516), (0.5, -0.25, 0.0), (0.5, -0.25, 0.025516)]
+        edges = [(2, 0), (0, 1), (1, 3), (3, 2), (6, 2), (3, 7), (7, 6), (4, 6), (7, 5), (5, 4), (0, 4), (5, 1),
+                 (10, 8), (8, 9), (9, 11), (11, 10), (14, 10), (11, 15), (15, 14), (12, 14), (15, 13), (13, 12),
+                 (8, 12), (13, 9)]
+        rct_box_mesh = bpy.data.meshes.new("RCT_platform_mesh")
+        rct_box_mesh.from_pydata(vertices, edges, [])
+        rct_box_mesh.update()
+        rct_box = objects.new("RCT_Plaform", rct_box_mesh)
+        scene.objects.link(rct_box)
+    rct_box.hide = True
+    rct_box.hide_select = True
+    rct_box.scale = (1.0, 1.0, 1.0)
+    rct_box.location = (0, 0, 0)
+    rct_box.parent = rct_size_preview
+    rct_box.layers = [i == 10 for i in range(20)]
+
+    rct_box = objects.get("RCT_Plaform_Narrow")
+    if rct_box is None:
+        vertices = [(-0.5, 0.375, 0.0), (-0.5, 0.375, 0.025516), (-0.5, 0.5, 0.0), (-0.5, 0.5, 0.025516),
+                    (0.5, 0.375, 0.0), (0.5, 0.375, 0.025516), (0.5, 0.5, 0.0), (0.5, 0.5, 0.025516),
+                    (-0.5, -0.5, 0.0), (-0.5, -0.5, 0.025516), (-0.5, -0.375, 0.0), (-0.5, -0.375, 0.025516),
+                    (0.5, -0.5, 0.0), (0.5, -0.5, 0.025516), (0.5, -0.375, 0.0), (0.5, -0.375, 0.025516)]
+        edges = [(2, 0), (0, 1), (1, 3), (3, 2), (6, 2), (3, 7), (7, 6), (4, 6), (7, 5), (5, 4), (0, 4), (5, 1),
+                 (10, 8), (8, 9), (9, 11), (11, 10), (14, 10), (11, 15), (15, 14), (12, 14), (15, 13), (13, 12),
+                 (8, 12), (13, 9)]
+        rct_box_mesh = bpy.data.meshes.new("RCT_platform_narrow_mesh")
+        rct_box_mesh.from_pydata(vertices, edges, [])
+        rct_box_mesh.update()
+        rct_box = objects.new("RCT_Plaform_Narrow", rct_box_mesh)
+        scene.objects.link(rct_box)
+    rct_box.hide = True
+    rct_box.hide_select = True
+    rct_box.scale = (1.0, 1.0, 1.0)
+    rct_box.location = (0, 0, 0)
+    rct_box.parent = rct_size_preview
+    rct_box.layers = [i == 10 for i in range(20)]
+
     return rct_size_preview
 
 
@@ -197,36 +334,30 @@ height = bpy.props.IntProperty(
     min=0,
     step=8,  # step is unused by blender, but I wish it was
     update=update_height)
-
 hasPrimaryColour = bpy.props.BoolProperty(
     name="Primary Color",
     description=("True for objects that have at least one remappable color."),
     default=False)
-
 hasSecondaryColour = bpy.props.BoolProperty(
     name="Secondary Color",
     description=("True for objects that have at least two remappable colors."),
     update=update_colors,
     default=False)
-
 hasTernaryColour = bpy.props.BoolProperty(
     name="Tertiary Color",
     description=("True for objects that have three remappable colors."),
     update=update_colors,
     default=False)
-
 price = bpy.props.IntProperty(
     name="Price",
     description=("The in-game cost of building this object."),
     default=15,
     soft_min=0)
-
 removalPrice = bpy.props.IntProperty(
     name="Removal Price",
     description="The cost of removing this object. This value is negative if the object gives a refund.",
     default=-10,
     soft_max=0)
-
 cursor = bpy.props.EnumProperty(
     name="Cursor",
     default="CURSOR_ARROW",
@@ -260,7 +391,6 @@ cursor = bpy.props.EnumProperty(
         ("CURSOR_HAND_CLOSED", "HAND CLOSED", ""),
         ("CURSOR_ARROW", "ARROW", ""),
     ])
-
 colour_list = [
     ("black", "Black", ""),
     ("grey", "Grey", ""),
@@ -302,6 +432,46 @@ colour = bpy.props.EnumProperty(
     description="Color",
     default="black"
 )
+buildMenuPriority = bpy.props.IntProperty(
+    name="Menu Priority",
+    description="Except for rides that list their subtypes/vehicles separately in the build menu, this number "
+    "describes the priority order for which subtype should show for the generic ride type in the build menu. Of all "
+    "the subtypes that are available and researched, whichever has the highest buildMenuPriority will show as "
+    "representative of the generic ride type.",
+    default=0, soft_min=0
+)
+maxHeight = bpy.props.IntProperty(
+    name="Max Height",
+    description="Maximum height of the ride (if set to 0, uses the hardcoded value for the ridetype)",
+    default=0, soft_min=0
+)
+
+
+class RatingMultiplier(bpy.types.PropertyGroup):
+    excitement = bpy.props.IntProperty(
+        name="Excitement Factor",
+        description="Additional excitement percentage for this specific ride subtype.\n\nWhile these values are "
+        "displayed in-game as if they were a percentage, they're really divided by 128, not 100. I.e., a value of "
+        "`10` here would display as `\"10%\"` when selecting a vehicle, but internally it only gives a boost of "
+        "10/128 or about 7.8%.",
+        default=0, soft_min=0, soft_max=100, subtype='PERCENTAGE'
+    )
+    intensity = bpy.props.IntProperty(
+        name="Intensity Factor",
+        description="Additional intensity percentage for this specific ride subtype.\n\nWhile these values are "
+        "displayed in-game as if they were a percentage, they're really divided by 128, not 100. I.e., a value of "
+        "`10` here would display as `\"10%\"` when selecting a vehicle, but internally it only gives a boost of "
+        "10/128 or about 7.8%.",
+        default=0, soft_min=0, soft_max=100, subtype='PERCENTAGE'
+    )
+    nausea = bpy.props.IntProperty(
+        name="Nausea Factor",
+        description="Additional nausea percentage for this specific ride subtype.\n\nWhile these values are "
+        "displayed in-game as if they were a percentage, they're really divided by 128, not 100. I.e., a value of "
+        "`10` here would display as `\"10%\"` when selecting a vehicle, but internally it only gives a boost of "
+        "10/128 or about 7.8%.",
+        default=0, soft_min=0, soft_max=100, subtype='PERCENTAGE'
+    )
 
 
 # Car Colours
@@ -426,3 +596,240 @@ car_colours_single_preset = bpy.props.BoolProperty(
     "that has different color schemes for each car/train",
     default=False
 )
+
+
+# Loading Waypoints
+###################
+
+class LoadingPositions_OT_actions(bpy.types.Operator):
+    """Buttons to add/remove/move a car position item."""
+    bl_idname = "loadingpositions.actions"
+    bl_label = "List Actions"
+    bl_description = "Add/Remove\n\nMove Up/Down"
+    bl_options = {'REGISTER'}
+
+    action = bpy.props.StringProperty()
+    car_index = bpy.props.IntProperty()
+    is_flat = bpy.props.BoolProperty(default=False)
+
+    def invoke(self, context: bpy.types.Context, event):
+        if self.is_flat:
+            car = context.scene.rct_graphics_helper_flatride_properties.car
+        else:
+            car = context.scene.rct_graphics_helper_vehicles_properties.cars[self.car_index]
+        index = getattr(car, "loading_positions_index")
+        loadingPositions = getattr(car, "loadingPositions")
+
+        try:
+            item = loadingPositions[index]
+        except IndexError:
+            pass
+        else:
+            if self.action == 'DOWN' and index < len(loadingPositions) - 1:
+                loadingPositions.move(index, index+1)
+                setattr(car, "loading_positions_index", index + 1)
+
+            elif self.action == 'UP' and index >= 1:
+                loadingPositions.move(index, index-1)
+                setattr(car, "loading_positions_index", index - 1)
+
+            elif self.action == 'REMOVE':
+                if index == len(loadingPositions) - 1:
+                    setattr(car, "loading_positions_index", index - 1)
+                loadingPositions.remove(index)
+
+        if self.action == 'ADD':
+            item = loadingPositions.add()
+            setattr(car, "loading_positions_index", len(loadingPositions)-1)
+
+        return {"FINISHED"}
+
+
+class LoadingPositions_UL_List(bpy.types.UIList):
+    """Defines the drawing function for each car position item"""
+
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        if self.layout_type in {'DEFAULT', 'COMPACT'}:
+            row = layout.row().split(0.3)
+            row.label("Position %s:" % index)
+            row.prop(item, "position", text="")
+        elif self.layout_type in {'GRID'}:
+            layout.alignment = 'CENTER'
+            layout.label(text="positionEntry")
+
+
+class LoadingPositionItem(bpy.types.PropertyGroup):
+    """Defines one entry (a route) in loadingPositions"""
+    position = bpy.props.IntProperty(
+        name="Position",
+        description="Position",
+        default=0
+    )
+
+
+loadingPositions = bpy.props.CollectionProperty(
+    type=LoadingPositionItem, name="Loading Positions",
+    description="A list of loading positions to use for this car.")
+loading_positions_index = bpy.props.IntProperty(default=0)
+
+
+# Loading Waypoints
+###################
+
+def set_loading_waypoints(context, loadingWaypoints):
+    scene = context.scene  # bpy.types.Scene
+
+
+class LoadingWaypoints_OT_actions(bpy.types.Operator):
+    """Buttons to add/remove/move a car position item."""
+    bl_idname = "loadingwaypoints.actions"
+    bl_label = "List Actions"
+    bl_description = "Add/Remove\n\nMove Up/Down"
+    bl_options = {'REGISTER'}
+
+    action = bpy.props.StringProperty()
+    car_index = bpy.props.IntProperty()
+    is_flat = bpy.props.BoolProperty(default=False)
+
+    def invoke(self, context: bpy.types.Context, event):
+        if self.is_flat:
+            car = context.scene.rct_graphics_helper_flatride_properties.car
+        else:
+            car = context.scene.rct_graphics_helper_vehicles_properties.cars[self.car_index]
+        index = getattr(car, "loading_waypoints_index")
+        loadingWaypoints = getattr(car, "loadingWaypoints")
+
+        try:
+            item = loadingWaypoints[index]
+        except IndexError:
+            pass
+        else:
+            if self.action == 'DOWN' and index < len(loadingWaypoints) - 1:
+                loadingWaypoints.move(index, index+1)
+                setattr(car, "loading_waypoints_index", index + 1)
+
+            elif self.action == 'UP' and index >= 1:
+                loadingWaypoints.move(index, index-1)
+                setattr(car, "loading_waypoints_index", index - 1)
+
+            elif self.action == 'REMOVE':
+                if index == len(loadingWaypoints) - 1:
+                    setattr(car, "loading_waypoints_index", index - 1)
+                loadingWaypoints.remove(index)
+
+        if self.action == 'ADD':
+            item = loadingWaypoints.add()
+            setattr(car, "loading_waypoints_index", len(loadingWaypoints)-1)
+
+        return {"FINISHED"}
+
+
+class LoadingWaypoints_UL_List(bpy.types.UIList):
+    """Defines the drawing function for each car position item"""
+
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        if self.layout_type in {'DEFAULT', 'COMPACT'}:
+            maincol = layout.column()  # type: bpy.types.UILayout
+            row = maincol.row().split(0.07)
+            row.label("[%s]" % index)
+            row.label("SW")
+            row.label("NW")
+            row.label("NE")
+            row.label("SE")
+            row = maincol.row().split(0.07)
+            col = row.column()
+            col.label("  0:")
+            col.label("  1:")
+            col.label("  2:")
+
+            col = row.column(align=True)
+            route = item.SW
+            subrow = col.row(align=True)
+            subrow.prop(route, "position1", text="")
+            subrow = col.row(align=True)
+            subrow.prop(route, "position2", text="")
+            subrow = col.row(align=True)
+            subrow.prop(route, "position3", text="")
+
+            col = row.column(align=True)
+            route = item.NW
+            subrow = col.row(align=True)
+            subrow.prop(route, "position1", text="")
+            subrow = col.row(align=True)
+            subrow.prop(route, "position2", text="")
+            subrow = col.row(align=True)
+            subrow.prop(route, "position3", text="")
+
+            col = row.column(align=True)
+            route = item.NE
+            subrow = col.row(align=True)
+            subrow.prop(route, "position1", text="")
+            subrow = col.row(align=True)
+            subrow.prop(route, "position2", text="")
+            subrow = col.row(align=True)
+            subrow.prop(route, "position3", text="")
+
+            col = row.column(align=True)
+            route = item.SE
+            subrow = col.row(align=True)
+            subrow.prop(route, "position1", text="")
+            subrow = col.row(align=True)
+            subrow.prop(route, "position2", text="")
+            subrow = col.row(align=True)
+            subrow.prop(route, "position3", text="")
+        elif self.layout_type in {'GRID'}:
+            layout.alignment = 'CENTER'
+            layout.label(text="positionEntry")
+
+
+class LoadingWaypointItem(bpy.types.PropertyGroup):
+    """Defines one entry (a route) in loadingWaypoints"""
+    position1 = bpy.props.IntVectorProperty(
+        name="First Position",
+        description="First Position",
+        size=2,
+        default=(0, 0),
+        subtype='XYZ'
+    )
+    position2 = bpy.props.IntVectorProperty(
+        name="Second Position",
+        description="Second Position",
+        size=2,
+        default=(0, 0),
+        subtype='XYZ'
+    )
+    position3 = bpy.props.IntVectorProperty(
+        name="Third Position",
+        description="Third Position",
+        size=2,
+        default=(0, 0),
+        subtype='XYZ'
+    )
+
+
+class LoadingWaypointSet(bpy.types.PropertyGroup):
+    
+    SW = bpy.props.PointerProperty(type=LoadingWaypointItem, name="SW",
+                                   description="Route when building is on south-west side")
+    NW = bpy.props.PointerProperty(type=LoadingWaypointItem, name="NW",
+                                   description="Route when building is on north-west side")
+    NE = bpy.props.PointerProperty(type=LoadingWaypointItem, name="NE",
+                                   description="Route when building is on north-east side")
+    SE = bpy.props.PointerProperty(type=LoadingWaypointItem, name="SE",
+                                   description="Route when building is on south-east side")
+
+
+def process_loading_waypoints(context):
+    loading_waypoints = []
+    raw_waypoints = [group_as_dict(i) for i in context.scene.loadingWaypoints]  # type: list[LoadingWaypointItem]
+    if not raw_waypoints:
+        return None
+    for entry in raw_waypoints:
+        loading_waypoints.append([entry['position1'], entry['position2'], entry['position3']])
+    return loading_waypoints
+
+
+loadingWaypoints = bpy.props.CollectionProperty(
+    type=LoadingWaypointSet, name="Loading Waypoints",
+    description="A list of loading waypoints to use for this car.")
+loading_waypoints_index = bpy.props.IntProperty(default=0)
