@@ -157,6 +157,9 @@ class RCTCreateRig(bpy.types.Operator):
         scene = bpy.context.scene
         objects = bpy.data.objects
         lamps = bpy.data.lamps
+        for area in bpy.context.screen.areas:
+            if area.type == 'VIEW_3D':
+                area.spaces[0].show_relationship_lines = False
         rct_rig = objects.get('RCT_Rig')
         if rct_rig is None:
             rct_rig = objects.new("RCT_Rig", None)

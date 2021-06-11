@@ -25,40 +25,7 @@ def update_vehicles(dummyself, context):
     scene = context.scene
     properties = scene.rct_graphics_helper_vehicles_properties  # type: VehiclesProperties
     objects = bpy.data.objects
-    objects.get("RCT_One_Quarter").hide = True
-    objects.get("RCT_Diagonal_1").hide = True
-    objects.get("RCT_Diagonal_2").hide = True
-    objects.get("RCT_Three_Quarter").hide = True
-    objects.get("RCT_Half_Tile").hide = True
-    size_preview = objects.get("RCT_Size_Preview")
-    if len(properties.cars) == 0:
-        objects.get("RCT_Full_Tile").hide = True
-        objects.get("RCT_Vehicle_Arrow").hide = True
-    else:
-        objects.get("RCT_Full_Tile").hide = False
-        clearance = ride_data[properties.type][0]
-        z_offset = -ride_data[properties.type][1] * 0.025516
-        platform_height = ride_data[properties.type][2]
-        objects.get("RCT_Plaform").scale = (1, 1, platform_height / clearance)
-        objects.get("RCT_Plaform_Narrow").scale = (1, 1, platform_height / clearance)
-        is_narrow = ride_data[properties.type][6]
-        if ride_data[properties.type][5]:  # Flat platform
-            objects.get("RCT_Vehicle_Arrow").hide = True
-            objects.get("RCT_Plaform").hide = True
-            objects.get("RCT_Plaform_Narrow").hide = True
-        else:
-            objects.get("RCT_Vehicle_Arrow").hide = False
-            if is_narrow:
-                objects.get("RCT_Plaform").hide = True
-                objects.get("RCT_Plaform_Narrow").hide = False
-            else:
-                objects.get("RCT_Plaform").hide = False
-                objects.get("RCT_Plaform_Narrow").hide = True
-            car = properties.cars[properties.cars_index]  # type: CarProperties
-            length = car.spacing / 262144
-            size_preview.scale = (length, 1, clearance)
-        size_preview.location = (0, 0, z_offset)
-    size_preview.hide = True
+    custom_properties.update_load_preview(None, context)
 
 
 class CompileVehicle(RCTRender, bpy.types.Operator):
@@ -175,23 +142,26 @@ class Cars_UL_List(bpy.types.UIList):
 
 
 class Frames(bpy.types.PropertyGroup):
-    flat = bpy.props.BoolProperty(name="Flat", default=False)
-    gentleSlopes = bpy.props.BoolProperty(name="Gentle Slope", default=False)
-    steepSlopes = bpy.props.BoolProperty(name="Steep Slope", default=False)
-    verticalSlopes = bpy.props.BoolProperty(name="Vertical Slope", default=False)
-    diagonalSlopes = bpy.props.BoolProperty(name="Diagonal Slope", default=False)
-    flatBanked = bpy.props.BoolProperty(name="Banked", default=False)
-    inlineTwists = bpy.props.BoolProperty(name="Inline Twist", default=False)
-    flatToGentleSlopeBankedTransitions = bpy.props.BoolProperty(name="Bank Transition", default=False)
-    diagonalGentleSlopeBankedTransitions = bpy.props.BoolProperty(name="Diagonal Bank Transition", default=False)
-    gentleSlopeBankedTransitions = bpy.props.BoolProperty(name="Gentle Bank Transition", default=False)
-    gentleSlopeBankedTurns = bpy.props.BoolProperty(name="Gentle Banked Turn", default=False)
+    flat = bpy.props.BoolProperty(name="Flat", default=False, update=update_vehicles)
+    gentleSlopes = bpy.props.BoolProperty(name="Gentle Slope", default=False, update=update_vehicles)
+    steepSlopes = bpy.props.BoolProperty(name="Steep Slope", default=False, update=update_vehicles)
+    verticalSlopes = bpy.props.BoolProperty(name="Vertical Slope", default=False, update=update_vehicles)
+    diagonalSlopes = bpy.props.BoolProperty(name="Diagonal Slope", default=False, update=update_vehicles)
+    flatBanked = bpy.props.BoolProperty(name="Banked", default=False, update=update_vehicles)
+    inlineTwists = bpy.props.BoolProperty(name="Inline Twist", default=False, update=update_vehicles)
+    flatToGentleSlopeBankedTransitions = bpy.props.BoolProperty(
+        name="Bank Transition", default=False, update=update_vehicles)
+    diagonalGentleSlopeBankedTransitions = bpy.props.BoolProperty(
+        name="Diagonal Bank Transition", default=False, update=update_vehicles)
+    gentleSlopeBankedTransitions = bpy.props.BoolProperty(
+        name="Gentle Bank Transition", default=False, update=update_vehicles)
+    gentleSlopeBankedTurns = bpy.props.BoolProperty(name="Gentle Banked Turn", default=False, update=update_vehicles)
     flatToGentleSlopeWhileBankedTransitions = bpy.props.BoolProperty(
-        name="Gentle Transition While Banked", default=False)
-    corkscrews = bpy.props.BoolProperty(name="Corkscrew", default=False)
-    restraintAnimation = bpy.props.BoolProperty(name="Restraints", default=False)
-    curvedLiftHill = bpy.props.BoolProperty(name="Curved Lift", default=False)
-    VEHICLE_SPRITE_FLAG_15 = bpy.props.BoolProperty(name="4 Rotation Frames", default=False)
+        name="Gentle Transition While Banked", default=False, update=update_vehicles)
+    corkscrews = bpy.props.BoolProperty(name="Corkscrew", default=False, update=update_vehicles)
+    restraintAnimation = bpy.props.BoolProperty(name="Restraints", default=False, update=update_vehicles)
+    curvedLiftHill = bpy.props.BoolProperty(name="Curved Lift", default=False, update=update_vehicles)
+    VEHICLE_SPRITE_FLAG_15 = bpy.props.BoolProperty(name="4 Rotation Frames", default=False, update=update_vehicles)
 
 
 class CarProperties(bpy.types.PropertyGroup):
@@ -222,20 +192,20 @@ class CarProperties(bpy.types.PropertyGroup):
     numSeats = bpy.props.IntProperty(
         name="Number Of Seats",
         description="Number of riders that this car holds",
-        default=0, min=0, max=255
+        default=0, min=0, max=255, update=update_vehicles
     )
     seatsInPairs = bpy.props.BoolProperty(
         name="Paired Seats",
         description="If set, indicates that guests sit in this car in pairs. Any car that seats more than one rider "
         "(and has riders visible) has to have this set if it uses the default visual mode (i.e. most of them).",
-        default=True
+        default=True, update=update_vehicles
     )
     numSeatRows = bpy.props.IntProperty(
         name="Rider Sets",
         description="The number of separate sets of rider images for this car. For the default visual mode, this is "
         "equal to half the number of seats (or 1, if this car only holds one rider, or the default of 0, if riders "
         "are not visible).",
-        default=0, min=0, max=255
+        default=0, min=0, max=255, update=update_vehicles
     )
     animation = bpy.props.EnumProperty(
         items=[
@@ -250,7 +220,7 @@ class CarProperties(bpy.types.PropertyGroup):
             ("8", "Monorail Cycles", ""),
             ("9", "Multidimensional Coaster", "")],
         name="Animation Mode",
-        description="Indicates a special animation mode to use for this car."
+        description="Indicates a special animation mode to use for this car.", update=update_vehicles
     )
     spinningInertia = bpy.props.IntProperty(
         name="Spin Inertia",
@@ -285,7 +255,7 @@ class CarProperties(bpy.types.PropertyGroup):
         name="Reverser Type",
         description="For rides with reverser elements, this is the index of the car to turn into after going through "
         "a reverser element.",
-        default=0, min=0, max=255
+        default=0, min=0, max=255, update=update_vehicles
     )
     soundRange = bpy.props.EnumProperty(
         items=[
@@ -363,7 +333,7 @@ class CarProperties(bpy.types.PropertyGroup):
         ],
         name="Visual Mode",
         description="Specifies the visual drawing mode of the car",
-        default="0",
+        default="0", update=update_vehicles
     )
     effectVisual = bpy.props.EnumProperty(
         items=[
@@ -377,7 +347,7 @@ class CarProperties(bpy.types.PropertyGroup):
         name="Effect Visual",
         description="If not set to \"None\", selects the type of splash effect to use for this car. (Splash images "
         "are in G1.DAT). Car Visual must be default/reverser or river rapids.",
-        default="1",
+        default="1", update=update_vehicles
     )
     drawOrder = bpy.props.IntProperty(
         name="Draw Order",
@@ -388,11 +358,12 @@ class CarProperties(bpy.types.PropertyGroup):
         name="Base Frames Override",
         description="Overrides the calculated number of \"base\" vertical frames. This is used for some cars that "
         "use multiple base frames, but don't have a special spinning or animation flag that sets the correct number.",
-        default=0, min=0, max=255
+        default=0, min=0, max=255, update=update_vehicles
     )
     use_waypoints = bpy.props.BoolProperty(
         name="Use Waypoints",
-        description="If true, use loading waypoints instead of loading positions."
+        description="If true, use loading waypoints instead of loading positions.",
+        update=update_vehicles
     )
     loadingWaypoints = custom_properties.loadingWaypoints
     loading_waypoints_index = custom_properties.loading_waypoints_index
@@ -415,67 +386,67 @@ class CarProperties(bpy.types.PropertyGroup):
     )
     isMiniGolf = bpy.props.BoolProperty(
         name="isMiniGolf",
-        description=("")
+        description=(""), update=update_vehicles
     )
     isReverserBogie = bpy.props.BoolProperty(
         name="isReverserBogie",
-        description=("")
+        description=(""), update=update_vehicles
     )
     isReverserPassengerCar = bpy.props.BoolProperty(
         name="isReverserPassengerCar",
-        description=("")
+        description=(""), update=update_vehicles
     )
     hasInvertedSpriteSet = bpy.props.BoolProperty(
         name="hasInvertedSpriteSet",
-        description=("")
+        description=(""), update=update_vehicles
     )
     hasDodgemInUseLights = bpy.props.BoolProperty(
         name="hasDodgemInUseLights",
-        description=("")
+        description=(""), update=update_vehicles
     )
     hasAdditionalColour2 = bpy.props.BoolProperty(
         name="hasAdditionalColour2",
-        description=("")
+        description=(""), update=update_vehicles
     )
     recalculateSpriteBounds = bpy.props.BoolProperty(
         name="recalculateSpriteBounds",
-        description=("")
+        description=(""), update=update_vehicles
     )
     VEHICLE_ENTRY_FLAG_11 = bpy.props.BoolProperty(
         name="VEHICLE_ENTRY_FLAG_11",
-        description=("")
+        description=(""), update=update_vehicles
     )
     overrideNumberOfVerticalFrames = bpy.props.BoolProperty(
         name="overrideNumberOfVerticalFrames",
-        description=("")
+        description=(""), update=update_vehicles
     )
     spriteBoundsIncludeInvertedSet = bpy.props.BoolProperty(
         name="spriteBoundsIncludeInvertedSet",
-        description=("")
+        description=(""), update=update_vehicles
     )
     hasAdditionalSpinningFrames = bpy.props.BoolProperty(
         name="hasAdditionalSpinningFrames",
-        description=("")
+        description=(""), update=update_vehicles
     )
     isLift = bpy.props.BoolProperty(
         name="isLift",
-        description=("")
+        description=(""), update=update_vehicles
     )
     hasAdditionalColour1 = bpy.props.BoolProperty(
         name="hasAdditionalColour1",
-        description=("")
+        description=(""), update=update_vehicles
     )
     hasSwinging = bpy.props.BoolProperty(
         name="hasSwinging",
-        description=("")
+        description=(""), update=update_vehicles
     )
     hasSpinning = bpy.props.BoolProperty(
         name="hasSpinning",
-        description=("")
+        description=(""), update=update_vehicles
     )
     isPowered = bpy.props.BoolProperty(
         name="isPowered",
-        description=("")
+        description=(""), update=update_vehicles
     )
     hasScreamingRiders = bpy.props.BoolProperty(
         name="hasScreamingRiders",
@@ -483,113 +454,44 @@ class CarProperties(bpy.types.PropertyGroup):
     )
     useSuspendedSwing = bpy.props.BoolProperty(
         name="useSuspendedSwing",
-        description=("")
+        description=(""), update=update_vehicles
     )
     useBoatHireCollisionDetection = bpy.props.BoolProperty(
         name="useBoatHireCollisionDetection",
-        description=("")
+        description=(""), update=update_vehicles
     )
     hasVehicleAnimation = bpy.props.BoolProperty(
         name="hasVehicleAnimation",
-        description=("")
+        description=(""), update=update_vehicles
     )
     hasRiderAnimation = bpy.props.BoolProperty(
         name="hasRiderAnimation",
-        description=("")
+        description=(""), update=update_vehicles
     )
     useWoodenWildMouseSwing = bpy.props.BoolProperty(
         name="useWoodenWildMouseSwing",
-        description=("")
+        description=(""), update=update_vehicles
     )
     useSlideSwing = bpy.props.BoolProperty(
         name="useSlideSwing",
-        description=("")
+        description=(""), update=update_vehicles
     )
     isChairlift = bpy.props.BoolProperty(
         name="isChairlift",
-        description=("")
+        description=(""), update=update_vehicles
     )
     isWaterRide = bpy.props.BoolProperty(
         name="isWaterRide",
-        description=("")
+        description=(""), update=update_vehicles
     )
     isGoKart = bpy.props.BoolProperty(
         name="isGoKart",
-        description=("")
+        description=(""), update=update_vehicles
     )
     useDodgemCarPlacement = bpy.props.BoolProperty(
         name="useDodgemCarPlacement",
-        description=("")
+        description=(""), update=update_vehicles
     )
-
-
-# (track_clearance, vehicle_z_offset, platform_height,
-#  is_suspended, list_separately, flat_platform, narrow_platform, unused)
-ride_data = {
-    "air_powered_vertical_rc": (24, 5, 7, False, False, False, True, False),
-    "boat_hire": (16, 0, 3, False, False, False, False, False),
-    "bobsleigh_rc": (24, 5, 7, False, False, False, False, False),
-    "car_ride": (24, 4, 7, False, False, False, False, False),
-    "chairlift": (32, 28, 2, True, False, False, False, False),
-    "classic_mini_rc": (24, 5, 7, False, False, False, False, False),
-    "compact_inverted_rc": (40, 29, 8, True, False, False, False, False),
-    "corkscrew_rc": (24, 8, 11, False, False, False, False, False),
-    "dinghy_slide": (24, 5, 7, False, False, False, False, False),
-    "dodgems": (48, 2, 2, False, False, True, False, False),
-    "flying_rc": (24, 8, 11, False, False, False, False, False),
-    "flying_saucers": (48, 2, 2, False, False, True, False, False),
-    "ghost_train": (24, 6, 7, False, False, False, False, False),
-    "giga_rc": (24, 9, 11, False, False, False, False, False),
-    "go_karts": (24, 2, 1, False, False, False, False, False),
-    "heartline_twister_rc": (24, 15, 9, False, False, False, False, False),
-    "hybrid_rc": (24, 13, 13, False, False, False, True, False),
-    "hyper_twister": (24, 8, 9, False, False, False, True, False),
-    "hypercoaster": (24, 8, 11, False, False, False, False, False),
-    "inverted_hairpin_rc": (24, 24, 7, True, False, False, False, False),
-    "inverted_impulse_rc": (40, 29, 8, True, False, False, False, False),
-    "inverted_rc": (40, 29, 8, True, False, False, False, False),
-    "junior_rc": (24, 4, 7, False, False, False, False, False),
-    "launched_freefall": (32, 3, 2, False, False, True, False, False),
-    "lay_down_rc": (24, 8, 11, False, False, False, False, False),
-    "lift": (32, 3, 2, False, False, True, False, False),
-    "lim_launched_rc": (24, 5, 7, False, False, False, False, False),
-    "log_flume": (24, 7, 9, False, False, False, False, False),
-    "looping_rc": (24, 5, 7, False, False, False, False, False),
-    "maze": (24, 0, 1, False, False, False, False, False),
-    "mine_ride": (24, 9, 11, False, False, False, False, False),
-    "mine_train_rc": (24, 4, 7, False, False, False, False, False),
-    "mini_golf": (32, 2, 2, False, False, False, False, False),
-    "mini_helicopters": (24, 4, 7, False, False, False, False, False),
-    "mini_rc": (24, 9, 11, False, False, False, False, False),
-    "mini_suspended_rc": (24, 24, 8, True, False, False, False, False),
-    "miniature_railway": (32, 5, 9, False, False, False, False, False),
-    "monorail": (32, 8, 9, False, False, False, False, False),
-    "monorail_cycles": (24, 8, 7, False, False, False, False, False),
-    "monster_trucks": (24, 4, 7, False, False, False, False, False),
-    "multi_dimension_rc": (24, 8, 11, False, False, False, False, False),
-    "observation_tower": (32, 3, 2, False, False, True, False, False),
-    "reverse_freefall_rc": (32, 4, 7, False, False, False, True, False),
-    "reverser_rc": (24, 8, 11, False, False, False, False, False),
-    "river_rafts": (24, 7, 11, False, False, False, False, False),
-    "river_rapids": (32, 14, 15, False, False, False, True, False),
-    "roto_drop": (32, 3, 2, False, False, True, False, False),
-    "side_friction_rc": (24, 4, 11, False, False, False, False, False),
-    "single_rail_rc": (24, 5, 7, False, False, False, False, False),
-    "spinning_wild_mouse": (24, 4, 7, False, False, False, False, False),
-    "spiral_rc": (24, 9, 11, False, False, False, False, False),
-    "splash_boats": (24, 7, 11, False, False, False, True, False),
-    "stand_up_rc": (24, 9, 11, False, False, False, False, False),
-    "steel_wild_mouse": (24, 4, 7, False, False, False, False, False),
-    "steeplechase": (24, 7, 7, False, False, False, False, False),
-    "submarine_ride": (32, 16, 19, False, False, False, False, False),  # Added 16 to account for underwater
-    "suspended_monorail": (40, 32, 8, True, False, False, False, False),
-    "suspended_swinging_rc": (40, 29, 8, True, False, False, False, False),
-    "twister_rc": (24, 8, 9, False, False, False, True, False),
-    "vertical_drop_rc": (24, 8, 11, False, False, False, True, False),
-    "virginia_reel": (24, 6, 7, False, False, False, False, False),
-    "water_coaster": (24, 4, 7, False, False, False, False, False),
-    "wooden_rc": (24, 8, 11, False, False, False, False, False),
-    "wooden_wild_mouse": (24, 4, 7, False, False, False, False, False)}
 
 
 ride_types = [
@@ -685,33 +587,35 @@ class VehiclesProperties(bpy.types.PropertyGroup):
     minCarsPerTrain = bpy.props.IntProperty(
         name="Min Cars Per Train",
         description="Minimum number of cars that can be in a train.",
-        min=0
+        min=0, update=update_vehicles
     )
     maxCarsPerTrain = bpy.props.IntProperty(
         name="Max Cars Per Train",
         description="Maximum number of cars that can be in a train.",
-        min=0
+        min=0, update=update_vehicles
     )
     numEmptyCars = bpy.props.IntProperty(
         name="Empty Cars",
         description="The number of \"zero\" cars in the train. That is, cars that do not hold any guests.",
-        min=0
+        min=0, update=update_vehicles
     )
     defaultCar = bpy.props.IntProperty(
         name="Default Car",
         description="Index of the car that should be used as the default car for this ride. In other words, this is "
         "the normal car that appears throughout the train wherever there isn't a special (i.e. front or rear) car.",
-        min=0
+        min=0, update=update_vehicles
     )
     headCars = bpy.props.StringProperty(
         name="Head Cars",
         description="The index(es) of up to three cars that should be used to fill the front of a train. Separate "
-        "multiple indexes with a comma."
+        "multiple indexes with a comma.",
+        update=update_vehicles
     )
     tailCars = bpy.props.StringProperty(
         name="Tail Car",
         description="Index of the car that should be used as the tail car, if any (you can list multiple cars, "
-        "separated by commas, but currently only the first index listed is used by OpenRCT2)."
+        "separated by commas, but currently only the first index listed is used by OpenRCT2).",
+        update=update_vehicles
     )
     tabCar = bpy.props.IntProperty(
         name="Tab Car",
@@ -729,7 +633,8 @@ class VehiclesProperties(bpy.types.PropertyGroup):
     )
     noBanking = bpy.props.BoolProperty(
         name="No Banking",
-        description="Flagged if the ride does not support banking"
+        description="Flagged if the ride does not support banking",
+        update=update_vehicles
     )
     playDepartSound = bpy.props.BoolProperty(
         name="Depart Sound",
@@ -770,21 +675,11 @@ class VehiclesProperties(bpy.types.PropertyGroup):
     )
     disablePainting = bpy.props.BoolProperty(
         name="Disable Painting",
-        description="Flagged if the ride does not support recolouring"
+        description="Flagged if the ride does not support recolouring",
+        update=update_vehicles
     )
     cars = bpy.props.CollectionProperty(type=CarProperties, name="Cars")
-    cars_index = bpy.props.IntProperty()
-
-    restraint_animation = bpy.props.BoolProperty(
-        name="Restraint Animation",
-        description="Render with restraint animation. The restrain animation is 3 frames long and starts at frame 1",
-        default=False)
-
-    inverted_set = bpy.props.BoolProperty(
-        name="Inverted Set",
-        description=("Used for rides which can invert for an extended amount of time like the flying and"
-                     "lay-down rollercoasters"),
-        default=False)
+    cars_index = bpy.props.IntProperty(update=update_vehicles)
 
 
 class Cars_OT_actions(bpy.types.Operator):

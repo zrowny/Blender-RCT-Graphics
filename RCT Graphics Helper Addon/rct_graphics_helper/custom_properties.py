@@ -254,7 +254,7 @@ def create_size_preview():
     rct_empty.hide = True
     rct_empty.hide_select = True
     rct_empty.empty_draw_type = 'SINGLE_ARROW'
-    # rct_empty.scale = (0.025516, 1.0, 1.0)
+    rct_empty.scale = (0.0, 1.0, 1.0)
     rct_empty.rotation_euler = [0, -math.pi/2, 0]
     rct_empty.location = (0.5, 0, 0)
     # rct_empty.parent = rct_size_preview
@@ -598,6 +598,141 @@ car_colours_single_preset = bpy.props.BoolProperty(
 )
 
 
+# (track_clearance, vehicle_z_offset, platform_height,
+#  is_suspended, list_separately, flat_platform, narrow_platform, unused)
+ride_data = {
+    "air_powered_vertical_rc": (24, 5, 7, False, False, False, True, False),
+    "boat_hire": (16, 0, 3, False, False, False, False, False),
+    "bobsleigh_rc": (24, 5, 7, False, False, False, False, False),
+    "car_ride": (24, 4, 7, False, False, False, False, False),
+    "chairlift": (32, 28, 2, True, False, False, False, False),
+    "classic_mini_rc": (24, 5, 7, False, False, False, False, False),
+    "compact_inverted_rc": (40, 29, 8, True, False, False, False, False),
+    "corkscrew_rc": (24, 8, 11, False, False, False, False, False),
+    "dinghy_slide": (24, 5, 7, False, False, False, False, False),
+    "dodgems": (48, 2, 2, False, False, True, False, False),
+    "flying_rc": (24, 8, 11, False, False, False, False, False),
+    "flying_saucers": (48, 2, 2, False, False, True, False, False),
+    "ghost_train": (24, 6, 7, False, False, False, False, False),
+    "giga_rc": (24, 9, 11, False, False, False, False, False),
+    "go_karts": (24, 2, 1, False, False, False, False, False),
+    "heartline_twister_rc": (24, 15, 9, False, False, False, False, False),
+    "hybrid_rc": (24, 13, 13, False, False, False, True, False),
+    "hyper_twister": (24, 8, 9, False, False, False, True, False),
+    "hypercoaster": (24, 8, 11, False, False, False, False, False),
+    "inverted_hairpin_rc": (24, 24, 7, True, False, False, False, False),
+    "inverted_impulse_rc": (40, 29, 8, True, False, False, False, False),
+    "inverted_rc": (40, 29, 8, True, False, False, False, False),
+    "junior_rc": (24, 4, 7, False, False, False, False, False),
+    "launched_freefall": (32, 3, 2, False, False, True, False, False),
+    "lay_down_rc": (24, 8, 11, False, False, False, False, False),
+    "lift": (32, 3, 2, False, False, True, False, False),
+    "lim_launched_rc": (24, 5, 7, False, False, False, False, False),
+    "log_flume": (24, 7, 9, False, False, False, False, False),
+    "looping_rc": (24, 5, 7, False, False, False, False, False),
+    "maze": (24, 0, 1, False, False, False, False, False),
+    "mine_ride": (24, 9, 11, False, False, False, False, False),
+    "mine_train_rc": (24, 4, 7, False, False, False, False, False),
+    "mini_golf": (32, 2, 2, False, False, False, False, False),
+    "mini_helicopters": (24, 4, 7, False, False, False, False, False),
+    "mini_rc": (24, 9, 11, False, False, False, False, False),
+    "mini_suspended_rc": (24, 24, 8, True, False, False, False, False),
+    "miniature_railway": (32, 5, 9, False, False, False, False, False),
+    "monorail": (32, 8, 9, False, False, False, False, False),
+    "monorail_cycles": (24, 8, 7, False, False, False, False, False),
+    "monster_trucks": (24, 4, 7, False, False, False, False, False),
+    "multi_dimension_rc": (24, 8, 11, False, False, False, False, False),
+    "observation_tower": (32, 3, 2, False, False, True, False, False),
+    "reverse_freefall_rc": (32, 4, 7, False, False, False, True, False),
+    "reverser_rc": (24, 8, 11, False, False, False, False, False),
+    "river_rafts": (24, 7, 11, False, False, False, False, False),
+    "river_rapids": (32, 14, 15, False, False, False, True, False),
+    "roto_drop": (32, 3, 2, False, False, True, False, False),
+    "side_friction_rc": (24, 4, 11, False, False, False, False, False),
+    "single_rail_rc": (24, 5, 7, False, False, False, False, False),
+    "spinning_wild_mouse": (24, 4, 7, False, False, False, False, False),
+    "spiral_rc": (24, 9, 11, False, False, False, False, False),
+    "splash_boats": (24, 7, 11, False, False, False, True, False),
+    "stand_up_rc": (24, 9, 11, False, False, False, False, False),
+    "steel_wild_mouse": (24, 4, 7, False, False, False, False, False),
+    "steeplechase": (24, 7, 7, False, False, False, False, False),
+    "submarine_ride": (32, 16, 19, False, False, False, False, False),  # Added 16 to account for underwater
+    "suspended_monorail": (40, 32, 8, True, False, False, False, False),
+    "suspended_swinging_rc": (40, 29, 8, True, False, False, False, False),
+    "twister_rc": (24, 8, 9, False, False, False, True, False),
+    "vertical_drop_rc": (24, 8, 11, False, False, False, True, False),
+    "virginia_reel": (24, 6, 7, False, False, False, False, False),
+    "water_coaster": (24, 4, 7, False, False, False, False, False),
+    "wooden_rc": (24, 8, 11, False, False, False, False, False),
+    "wooden_wild_mouse": (24, 4, 7, False, False, False, False, False)}
+
+
+def update_load_preview(dummyself, context):
+    scene = context.scene
+    properties = scene.rct_graphics_helper_vehicles_properties
+    objects = bpy.data.objects
+    objects.get("RCT_One_Quarter").hide = True
+    objects.get("RCT_Diagonal_1").hide = True
+    objects.get("RCT_Diagonal_2").hide = True
+    objects.get("RCT_Three_Quarter").hide = True
+    objects.get("RCT_Half_Tile").hide = True
+    size_preview = objects.get("RCT_Size_Preview")
+    size_preview.hide = True
+    if len(properties.cars) == 0:
+        objects.get("RCT_Full_Tile").hide = True
+        objects.get("RCT_Vehicle_Arrow").hide = True
+        objects.get("RCT_Vehicle_Arrow").hide = True
+        objects.get("RCT_Plaform").hide = True
+    else:
+        car = properties.cars[properties.cars_index]
+        objects.get("RCT_Full_Tile").hide = False
+        clearance = ride_data[properties.type][0]
+        z_offset = -ride_data[properties.type][1] * 0.025516
+        platform_height = ride_data[properties.type][2]
+        objects.get("RCT_Plaform").scale = (1, 1, platform_height / clearance)
+        objects.get("RCT_Plaform_Narrow").scale = (1, 1, platform_height / clearance)
+        is_narrow = ride_data[properties.type][6]
+        if ride_data[properties.type][5]:  # Flat platform
+            objects.get("RCT_Vehicle_Arrow").hide = True
+            objects.get("RCT_Plaform").hide = True
+            objects.get("RCT_Plaform_Narrow").hide = True
+        else:
+            objects.get("RCT_Vehicle_Arrow").hide = False
+            if is_narrow:
+                objects.get("RCT_Plaform").hide = True
+                objects.get("RCT_Plaform_Narrow").hide = False
+            else:
+                objects.get("RCT_Plaform").hide = False
+                objects.get("RCT_Plaform_Narrow").hide = True
+            length = car.spacing / 262144
+            size_preview.scale = (length, 1, clearance)
+        size_preview.location = (0, 0, z_offset)
+        rct_load_preview = objects.get("RCT_Load_Preview", None)
+        if rct_load_preview is None:
+            rct_load_preview = objects.new("RCT_Load_Preview", None)
+            scene.objects.link(rct_load_preview)
+        else:
+            for o in rct_load_preview.children:
+                objects.remove(o)
+        rct_load_preview.hide_select = True
+        rct_load_preview.hide = True
+        rct_load_preview.location = (0, 0, 0)
+        if car.use_waypoints:
+            pass
+        else:
+            for i in range(len(car.loadingPositions)):
+                x = -car.loadingPositions[i].position / 32
+                rct_empty = objects.new("Position %s" % i, None)
+                scene.objects.link(rct_empty)
+                rct_empty.hide_select = True
+                rct_empty.show_name = True
+                rct_empty.empty_draw_type = 'SINGLE_ARROW'
+                rct_empty.scale = (0.5, 0.5, 0.2)
+                rct_empty.rotation_euler = [-math.pi/2, 0, 0]
+                rct_empty.location = (x, -0.6, 0)
+                rct_empty.parent = rct_load_preview
+
+
 # Loading Waypoints
 ###################
 
@@ -642,6 +777,7 @@ class LoadingPositions_OT_actions(bpy.types.Operator):
             item = loadingPositions.add()
             setattr(car, "loading_positions_index", len(loadingPositions)-1)
 
+        update_load_preview(None, context)
         return {"FINISHED"}
 
 
@@ -663,14 +799,15 @@ class LoadingPositionItem(bpy.types.PropertyGroup):
     position = bpy.props.IntProperty(
         name="Position",
         description="Position",
-        default=0
+        default=0,
+        update=update_load_preview
     )
 
 
 loadingPositions = bpy.props.CollectionProperty(
     type=LoadingPositionItem, name="Loading Positions",
     description="A list of loading positions to use for this car.")
-loading_positions_index = bpy.props.IntProperty(default=0)
+loading_positions_index = bpy.props.IntProperty(default=0, update=update_load_preview)
 
 
 # Loading Waypoints
@@ -721,6 +858,7 @@ class LoadingWaypoints_OT_actions(bpy.types.Operator):
             item = loadingWaypoints.add()
             setattr(car, "loading_waypoints_index", len(loadingWaypoints)-1)
 
+        update_load_preview(None, context)
         return {"FINISHED"}
 
 
@@ -789,21 +927,24 @@ class LoadingWaypointItem(bpy.types.PropertyGroup):
         description="First Position",
         size=2,
         default=(0, 0),
-        subtype='XYZ'
+        subtype='XYZ',
+        update=update_load_preview
     )
     position2 = bpy.props.IntVectorProperty(
         name="Second Position",
         description="Second Position",
         size=2,
         default=(0, 0),
-        subtype='XYZ'
+        subtype='XYZ',
+        update=update_load_preview
     )
     position3 = bpy.props.IntVectorProperty(
         name="Third Position",
         description="Third Position",
         size=2,
         default=(0, 0),
-        subtype='XYZ'
+        subtype='XYZ',
+        update=update_load_preview
     )
 
 
@@ -832,4 +973,4 @@ def process_loading_waypoints(context):
 loadingWaypoints = bpy.props.CollectionProperty(
     type=LoadingWaypointSet, name="Loading Waypoints",
     description="A list of loading waypoints to use for this car.")
-loading_waypoints_index = bpy.props.IntProperty(default=0)
+loading_waypoints_index = bpy.props.IntProperty(default=0, update=update_load_preview)
