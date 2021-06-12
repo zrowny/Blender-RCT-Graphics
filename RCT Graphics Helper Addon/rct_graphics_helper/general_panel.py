@@ -154,7 +154,8 @@ class RCTCreateRig(bpy.types.Operator):
     bl_label = "Create Rendering Rig"
 
     def execute(self, context):
-        scene = bpy.context.scene
+        print("Creating Rig")
+        scene = context.scene
         objects = bpy.data.objects
         lamps = bpy.data.lamps
         for area in bpy.context.screen.areas:
@@ -181,9 +182,9 @@ class RCTCreateRig(bpy.types.Operator):
         rct_camera_data = rct_camera.data  # type: bpy.types.Camera
         rct_camera_data.ortho_scale = 5.657
         rct_camera_data.type = "ORTHO"
-        rct_camera.location = ((1/64)-20/math.sqrt(2),
-                               (1/64)-20/math.sqrt(2), 20*math.tan(math.pi/6))
-        rct_camera.rotation_euler = [math.pi/3, 0, -math.pi/4]
+        rct_camera.location = (-(1/64)+20/math.sqrt(2),
+                               -(1/64)+20/math.sqrt(2), 20*math.tan(math.pi/6))
+        rct_camera.rotation_euler = [math.pi/3, 0, 3*math.pi/4]
         rct_camera.parent = rct_vertical_joint
         rct_camera.hide_select = True
         rct_camera.layers = [i == 10 for i in range(20)]
@@ -205,7 +206,7 @@ class RCTCreateRig(bpy.types.Operator):
             light_data.energy = 0.9
             light_data.use_specular = False
             light_data.shadow_method = "NOSHADOW"
-            light.location = (16, -14, 12)
+            light.location = (-16, 14, 12)
             constraint = light.constraints.new("DAMPED_TRACK")  # type: bpy.types.DampedTrackConstraint
             constraint.target = rct_vertical_joint
             constraint.track_axis = "TRACK_NEGATIVE_Z"
@@ -223,7 +224,7 @@ class RCTCreateRig(bpy.types.Operator):
                 light_data.use_specular = False
                 light_data.falloff_type = "CONSTANT"
                 light_data.shadow_method = "NOSHADOW"
-                light.location = (-2.5, 23, 14)
+                light.location = (2.5, -23, 14)
                 constraint = light.constraints.new("DAMPED_TRACK")  # type: bpy.types.DampedTrackConstraint
                 constraint.target = rct_vertical_joint
                 constraint.track_axis = "TRACK_NEGATIVE_Z"
@@ -241,7 +242,7 @@ class RCTCreateRig(bpy.types.Operator):
                 light_data.use_specular = False
                 light_data.falloff_type = "CONSTANT"
                 light_data.shadow_method = "NOSHADOW"
-                light.location = (5, -18.5, 1.5)
+                light.location = (-5, 18.5, 1.5)
                 # type: bpy.types.DampedTrackConstraint
                 constraint = light.constraints.new("DAMPED_TRACK")
                 constraint.target = rct_vertical_joint
@@ -279,7 +280,7 @@ class RCTCreateRig(bpy.types.Operator):
                 light_data.shadow_ray_sample_method = "CONSTANT_QMC"
                 light_data.shadow_ray_samples = 1
                 light_data.shadow_soft_size = 1.2
-                light.location = (16, -14, 12)
+                light.location = (-16, 14, 12)
                 constraint = light.constraints.new("DAMPED_TRACK")  # type: bpy.types.DampedTrackConstraint
                 constraint.target = rct_vertical_joint
                 constraint.track_axis = "TRACK_NEGATIVE_Z"
@@ -297,7 +298,7 @@ class RCTCreateRig(bpy.types.Operator):
                 light_data.use_specular = False
                 light_data.falloff_type = "CONSTANT"
                 light_data.shadow_method = "NOSHADOW"
-                light.location = (-18, -1.5, 8)
+                light.location = (18, 1.5, 8)
                 constraint = light.constraints.new("DAMPED_TRACK")  # type: bpy.types.DampedTrackConstraint
                 constraint.target = rct_vertical_joint
                 constraint.track_axis = "TRACK_NEGATIVE_Z"
@@ -314,7 +315,7 @@ class RCTCreateRig(bpy.types.Operator):
                 light_data.energy = 0.3
                 light_data.falloff_type = "CONSTANT"
                 light_data.shadow_method = "NOSHADOW"
-                light.location = (16, -14, 12)
+                light.location = (-16, 14, 12)
                 constraint = light.constraints.new("DAMPED_TRACK")  # type: bpy.types.DampedTrackConstraint
                 constraint.target = rct_vertical_joint
                 constraint.track_axis = "TRACK_NEGATIVE_Z"
@@ -324,7 +325,7 @@ class RCTCreateRig(bpy.types.Operator):
         
         scene.layers = [scene.layers[i] or i == 10 for i in range(20)]
         
-        create_size_preview()
+        create_size_preview(context)
         update_object_type(context.scene.rct_graphics_helper_general_properties, context)
 
         return {"FINISHED"}
